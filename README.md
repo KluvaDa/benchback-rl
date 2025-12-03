@@ -1,2 +1,2 @@
 # benchback-rl
-Benchmarking Backends for Reinforcement Learning - PyTorch, JAX.NNX, Flax.linen
+Benchmarking Backends for Reinforcement Learning - PyTorch, JAX.NNX, Flax
