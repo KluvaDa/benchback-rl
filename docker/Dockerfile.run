@@ -1,0 +1,25 @@
+FROM nvcr.io/nvidia/jax:25.10-py3
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Set working directory
+WORKDIR /workspace
+
+# Copy locked requirements for reproducible builds
+COPY requirements.txt ./
+
+# Install pinned dependencies
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system --break-system-packages -r requirements.txt
+
+# Copy source code and project metadata
+COPY src/ src/
+COPY pyproject.toml README.md ./
+
+# Install the project itself (non-editable, no deps since they're already installed)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system --break-system-packages --no-deps .
+
+# Default command
+CMD ["python", "-c", "print('Benchback RL container ready. Add your command here.')"]

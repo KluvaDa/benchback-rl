@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "benchback-rl"
+version = "0.1.0"
+description = "Benchmarking Backends for RL - PyTorch, JAX with Flax.NNX, JAX with Flax.Linen"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT"}
+
+authors = [
+    { name = "Daniel Kluvanec"}
+]
+
+dependencies = [
+    "jax>=0.7.2.dev0",
+    "jaxlib>=0.7.2.dev0",
+    "flax>=0.11.2",
+    "optax>=0.2.6",
+    "torch>=2.5.0",
+    "numpy>=2.3.0",
+
+]
+
+[project.optional-dependencies]
+# Development dependencies
+dev = [
+    "pytest>=7.4.0",
+    "ruff>=0.1.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/KluvaDa/benchback-rl"

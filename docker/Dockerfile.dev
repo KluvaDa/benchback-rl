@@ -1,0 +1,25 @@
+FROM nvcr.io/nvidia/jax:25.10-py3
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Install Docker CLI for accessing host Docker
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends docker.io && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /workspace
+
+# Copy only metadata needed for editable install (code comes from bind mount)
+COPY pyproject.toml README.md ./
+RUN mkdir -p src/benchback_rl
+COPY src/benchback_rl/__init__.py src/benchback_rl/
+
+# Install dependencies and editable package with dev extras
+# The actual source code will be provided by bind mount at runtime
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system --break-system-packages -e ".[dev]"
+
+# Keep container running
+CMD ["sleep", "infinity"]

@@ -1,6 +1,6 @@
 {
   "name": "benchback-rl",
-  "dockerComposeFile": "../docker-compose.yml",
+  "dockerComposeFile": "../docker/docker-compose.dev.yml",
   "service": "dev",
   "workspaceFolder": "/workspace",
   "customizations": {
