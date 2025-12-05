@@ -1,5 +1,9 @@
 FROM nvcr.io/nvidia/jax:25.10-py3
 
+# Prioritize system CUDA libraries so JAX uses the correct cuDNN version
+# PyTorch will still find its own bundled CUDA libs via Python imports
+ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
+
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
@@ -10,6 +14,7 @@ WORKDIR /workspace
 COPY requirements.txt ./
 
 # Install pinned dependencies
+# PyTorch installs its own CUDA packages, JAX uses system CUDA from base image
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install --system --break-system-packages -r requirements.txt
 
