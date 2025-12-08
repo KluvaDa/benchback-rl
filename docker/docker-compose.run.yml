@@ -1,0 +1,16 @@
+services:
+  run:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.run
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    shm_size: '1gb'
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    ipc: host
+    # Uncomment below for interactive use
+    # stdin_open: true
+    # tty: true

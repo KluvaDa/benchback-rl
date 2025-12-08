@@ -4,27 +4,28 @@ FROM nvcr.io/nvidia/jax:25.10-py3
 # PyTorch will still find its own bundled CUDA libs via Python imports
 ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
 # Set working directory
 WORKDIR /workspace
 
 # Copy locked requirements for reproducible builds
 COPY requirements.txt ./
 
-# Install pinned dependencies
+# Install pinned dependencies with pip cache
 # PyTorch installs its own CUDA packages, JAX uses system CUDA from base image
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system --break-system-packages -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
 
 # Copy source code and project metadata
 COPY src/ src/
 COPY pyproject.toml README.md ./
 
 # Install the project itself (non-editable, no deps since they're already installed)
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system --break-system-packages --no-deps .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-deps .
+
+# JAX/PyTorch GPU runtime requirements (cannot be set in Dockerfile, must be set at runtime):
+#   docker run --gpus all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 --shm-size=1g ...
+# Or use the provided docker-compose.yml
 
 # Default command
 CMD ["python", "-c", "print('Benchback RL container ready. Add your command here.')"]

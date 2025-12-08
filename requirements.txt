@@ -20,6 +20,7 @@ humanize==4.13.0
 idna==3.10
 importlib_metadata==8.7.0
 importlib_resources==6.5.2
+iniconfig==2.3.0
 ipython==9.6.0
 ipython_pygments_lexers==1.1.1
 jax==0.7.2.dev20251001+9b0b777ff
@@ -37,7 +38,7 @@ ml_dtypes==0.5.3
 mpmath==1.3.0
 msgpack==1.1.1
 nest-asyncio==1.6.0
-networkx==3.6
+networkx==3.6.1
 nsys-jax==0.1.dev1236+g0b57ec17b
 numpy==2.3.3
 nvidia-cublas-cu12==12.8.4.1
@@ -59,10 +60,12 @@ oauthlib==3.3.1
 opt_einsum==3.4.0
 optax==0.2.6
 orbax-checkpoint==0.11.25
+packaging==25.0
 pandas==2.3.3
 parso==0.8.5
 pexpect==4.9.0
 pip-tools==7.4.1
+pluggy==1.6.0
 prettytable==3.16.0
 prompt_toolkit==3.0.52
 protobuf==6.32.1
@@ -76,6 +79,7 @@ pydantic==2.11.9
 pydantic_core==2.33.2
 Pygments==2.19.2
 pyproject_hooks==1.2.0
+pytest==9.0.2
 python-dateutil==2.9.0.post0
 pytz==2025.2
 PyYAML==6.0.3
@@ -83,6 +87,7 @@ requests==2.32.5
 requests-oauthlib==2.0.0
 rich==14.1.0
 rsa==4.9.1
+ruff==0.14.8
 scipy==1.16.2
 setuptools==80.9.0
 simplejson==3.20.2

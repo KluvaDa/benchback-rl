@@ -9,6 +9,6 @@ This repo lists its requirements in `pyproject.toml`, while `requirements.txt` c
 
 - **`docker/Dockerfile.run`**: Used for running benchmarks in a reproducible way using `requirements.txt`
 - **`docker/Dockerfile.dev`**: Used for development, installs dependencies from `pyproject.toml` including optional ones.
-- **`scripts/export_requirements.sh`**: Generates `requirements.txt` from the existing environment minus the optional dependencies in `pyproject.toml`. It is meant to be executed from within the `docker/Dockerfile.dev` container
+- **`scripts/export_requirements.sh`**: Generates `requirements.txt` from the existing environment. Use it inside the `docker/Dockerfile.dev` container to fix dependency versions for reproducible running.
 - **`.devcontainer.json` and `docker/docker-compose.dev.yml`**: Set up to run the `docker/Dockerfile.dev` container as a VSCode Dev Container
 - **`docker/.env`**: Specifies the correct user UID/GID for file permission consistency between host and container

@@ -4,12 +4,17 @@ FROM nvcr.io/nvidia/jax:25.10-py3
 # PyTorch will still find its own bundled CUDA libs via Python imports
 ENV LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/cuda/lib64:${LD_LIBRARY_PATH}
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
-# Install Docker CLI for accessing host Docker
+# Install Docker CLI with buildx and compose from Docker's official repository
+# We use DooD (Docker-outside-of-Docker) via mounted /var/run/docker.sock
+# Ubuntu's docker.io package lacks buildx, so we use Docker's official packages
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends docker.io && \
+    apt-get install -y --no-install-recommends ca-certificates curl gnupg && \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg && \
+    chmod a+r /etc/apt/keyrings/docker.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo \"${UBUNTU_CODENAME:-$VERSION_CODENAME}\") stable" > /etc/apt/sources.list.d/docker.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends docker-ce-cli docker-buildx-plugin docker-compose-plugin && \
     rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -23,8 +28,8 @@ COPY src/benchback_rl/__init__.py src/benchback_rl/
 # Install dependencies and editable package with dev extras
 # PyTorch installs its own CUDA packages, JAX uses system CUDA from base image
 # The actual source code will be provided by bind mount at runtime
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system --break-system-packages -e ".[dev]"
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -e ".[dev]"
 
 # Keep container running
 CMD ["sleep", "infinity"]
