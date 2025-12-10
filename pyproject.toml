@@ -21,7 +21,7 @@ dependencies = [
     "optax>=0.2.6",
     "torch>=2.5.0",
     "numpy>=2.3.0",
-
+    "gymnax>=0.0.9",
 ]
 
 [project.optional-dependencies]
