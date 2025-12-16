@@ -124,101 +124,94 @@ class TestTorchEnv:
     def test_reset_returns_torch_tensor_obs(
         self, env: TorchEnv, key: jax.Array
     ) -> None:
-        obs, state = env.reset(key)
+        obs = env.reset(key)
 
         assert isinstance(obs, torch.Tensor)
 
     def test_reset_obs_on_cuda(self, env: TorchEnv, key: jax.Array) -> None:
-        obs, state = env.reset(key)
+        obs = env.reset(key)
 
         assert obs.device.type == "cuda"
 
     def test_reset_obs_shape(self, env: TorchEnv, key: jax.Array) -> None:
-        obs, state = env.reset(key)
+        obs = env.reset(key)
 
         assert obs.shape == (4, 4)  # (num_envs, obs_dim) for CartPole
 
-    def test_reset_returns_state(self, env: TorchEnv, key: jax.Array) -> None:
-        obs, state = env.reset(key)
+    def test_reset_sets_internal_state(self, env: TorchEnv, key: jax.Array) -> None:
+        env.reset(key)
 
-        assert state is not None
+        assert env._state is not None
 
     def test_step_returns_torch_tensors(
         self, env: TorchEnv, key: jax.Array
     ) -> None:
-        obs, state = env.reset(key)
+        env.reset(key)
         key, step_key = jax.random.split(key)
         actions = torch.zeros(4, dtype=torch.int32, device="cuda")
 
-        obs, state, reward, done, info = env.step(step_key, state, actions)
+        obs, reward, done, info = env.step(step_key, actions)
 
         assert isinstance(obs, torch.Tensor)
         assert isinstance(reward, torch.Tensor)
         assert isinstance(done, torch.Tensor)
 
     def test_step_tensors_on_cuda(self, env: TorchEnv, key: jax.Array) -> None:
-        obs, state = env.reset(key)
+        env.reset(key)
         key, step_key = jax.random.split(key)
         actions = torch.zeros(4, dtype=torch.int32, device="cuda")
 
-        obs, state, reward, done, info = env.step(step_key, state, actions)
+        obs, reward, done, info = env.step(step_key, actions)
 
         assert obs.device.type == "cuda"
         assert reward.device.type == "cuda"
         assert done.device.type == "cuda"
 
     def test_step_obs_shape(self, env: TorchEnv, key: jax.Array) -> None:
-        obs, state = env.reset(key)
+        env.reset(key)
         key, step_key = jax.random.split(key)
         actions = torch.zeros(4, dtype=torch.int32, device="cuda")
 
-        obs, state, reward, done, info = env.step(step_key, state, actions)
+        obs, reward, done, info = env.step(step_key, actions)
 
         assert obs.shape == (4, 4)
 
     def test_step_reward_shape(self, env: TorchEnv, key: jax.Array) -> None:
-        obs, state = env.reset(key)
+        env.reset(key)
         key, step_key = jax.random.split(key)
         actions = torch.zeros(4, dtype=torch.int32, device="cuda")
 
-        obs, state, reward, done, info = env.step(step_key, state, actions)
+        obs, reward, done, info = env.step(step_key, actions)
 
         assert reward.shape == (4,)
 
     def test_step_done_shape(self, env: TorchEnv, key: jax.Array) -> None:
-        obs, state = env.reset(key)
+        env.reset(key)
         key, step_key = jax.random.split(key)
         actions = torch.zeros(4, dtype=torch.int32, device="cuda")
 
-        obs, state, reward, done, info = env.step(step_key, state, actions)
+        obs, reward, done, info = env.step(step_key, actions)
 
         assert done.shape == (4,)
 
     def test_step_info_contains_discount(
         self, env: TorchEnv, key: jax.Array
     ) -> None:
-        obs, state = env.reset(key)
+        env.reset(key)
         key, step_key = jax.random.split(key)
         actions = torch.zeros(4, dtype=torch.int32, device="cuda")
 
-        obs, state, reward, done, info = env.step(step_key, state, actions)
+        obs, reward, done, info = env.step(step_key, actions)
 
         assert "discount" in info
         assert isinstance(info["discount"], torch.Tensor)
 
     def test_jit_false_still_works(self, key: jax.Array) -> None:
         env = TorchEnv("CartPole-v1", num_envs=2, jit=False)
-        obs, state = env.reset(key)
+        obs = env.reset(key)
 
         assert obs.shape == (2, 4)
 
-    def test_continuous_action_env(self, key: jax.Array) -> None:
-        env = TorchEnv("Pendulum-v1", num_envs=2, jit=True)
-        obs, state = env.reset(key)
-
-        key, step_key = jax.random.split(key)
-        actions = torch.zeros((2, 1), dtype=torch.float32, device="cuda")
-        obs, state, reward, done, info = env.step(step_key, state, actions)
-
-        assert obs.shape == (2, 3)  # Pendulum obs dim is 3
-        assert reward.shape == (2,)
+    def test_continuous_action_env_raises_error(self) -> None:
+        with pytest.raises(ValueError, match="Only Discrete action spaces supported"):
+            TorchEnv("Pendulum-v1", num_envs=2, jit=True)
