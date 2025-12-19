@@ -2,6 +2,7 @@
 
 from typing import Any
 
+import time
 import gymnax
 from gymnax.environments import spaces
 import jax
@@ -20,12 +21,13 @@ class TorchEnv:
     The internal JAX env state is managed by this class and not exposed.
     """
 
-    def __init__(self, env_name: str, num_envs: int, jit: bool = True) -> None:
+    def __init__(self, env_name: str, num_envs: int, jit: bool = True, seed: int|None=None) -> None:
         self.params: Any
         self.num_actions: int
         self.obs_dim: int
         self.num_envs: int
         self._state: Any = None  # Internal JAX env state
+        self.rng_key: jax.Array
 
         env, self.params = gymnax.make(env_name)
 
@@ -53,21 +55,30 @@ class TorchEnv:
         if jit:
             self._reset_fn = jax.jit(self._reset_fn)
             self._step_fn = jax.jit(self._step_fn)
+        
+        # set random key
+        if seed is None:
+            seed = time.time_ns()
+        self.rng_key = jax.random.key(seed)
 
-    def reset(self, key: jax.Array) -> torch.Tensor:
-        """Reset all environments.
+    def reset(self, rng_key: jax.Array | None = None) -> torch.Tensor:
+        """Reset all environments. Must be called before the first step().
+        Optinally uses the specified rng_key, otherwise uses the saved self.rng_key.
 
         Returns:
             Initial observations (num_envs, obs_dim)
         """
+        if rng_key is None:
+            self.rng_key, subkey = jax.random.split(self.rng_key)
+        else:
+            subkey = rng_key
+
         # keys: (num_envs, 2) - one key per environment
-        keys = jax.random.split(key, self.num_envs)
+        keys = jax.random.split(subkey, self.num_envs)
         obs, self._state = self._reset_fn(keys, self.params)
         return jax_to_torch(obs)
 
-    def step(
-        self, key: jax.Array, action: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
+    def step(self, action: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         """Step all environments.
 
         Returns:
@@ -76,9 +87,10 @@ class TorchEnv:
         assert self._state is not None, "Must call reset() before step()"
         # keys: (num_envs, 2) - one key per environment
         # action: (num_envs,) discrete or (num_envs, action_dim) continuous
-        keys = jax.random.split(key, self.num_envs)
+        self.rng_key, subkey = jax.random.split(self.rng_key)
+        subkeys = jax.random.split(subkey, self.num_envs)
         obs, self._state, reward, done, info = self._step_fn(
-            keys, self._state, torch_to_jax(action), self.params
+            subkeys, self._state, torch_to_jax(action), self.params
         )
         return (
             jax_to_torch(obs),
