@@ -96,8 +96,8 @@ class EnvCarry:
 class Rollout:
     """Rollout data collected from environment interactions.
     
-    All arrays have shape (num_steps, num_envs, ...) except final_obs
-    which has shape (num_envs, obs_dim).
+    All arrays have shape (num_steps, num_envs, ...) except final_obs and final_value
+    which have shape (num_envs, ...) for the observation after the final step.
     """
     obs: jax.Array          # (num_steps, num_envs, obs_dim)
     actions: jax.Array      # (num_steps, num_envs)
@@ -105,8 +105,63 @@ class Rollout:
     values: jax.Array       # (num_steps, num_envs)
     rewards: jax.Array      # (num_steps, num_envs)
     dones: jax.Array        # (num_steps, num_envs)
-    final_obs: jax.Array    # (num_envs, obs_dim) - for bootstrap value
-    final_env_state: EnvStateVmapped  # Final env state after rollout - for bootstrap value
+    final_obs: jax.Array    # (num_envs, obs_dim) - obs after final step
+    final_value: jax.Array  # (num_envs,) - V(final_obs) for GAE computation
+
+
+@struct.dataclass
+class RolloutWithGAE:
+    """Rollout augmented with computed GAE advantages and returns."""
+    rollout: Rollout
+    advantages: jax.Array   # (num_steps, num_envs)
+    returns: jax.Array      # (num_steps, num_envs)
+
+
+def _compute_gae(
+    rollout: Rollout,
+    gamma: float,
+    gae_lambda: float,
+) -> RolloutWithGAE:
+    """Compute Generalized Advantage Estimation (GAE).
+    
+    Args:
+        rollout: Collected rollout data with values, rewards, dones, and final_value.
+        gamma: Discount factor.
+        gae_lambda: GAE lambda parameter.
+    
+    Returns:
+        RolloutWithGAE containing original rollout plus advantages and returns.
+    """
+    def _gae_step(carry, xs):
+        # "next" refers to timestep t+1, not the next iteration (in reverse order)
+        next_gae, next_value = carry
+        value, reward, done = xs
+        
+        not_done = 1.0 - done
+        delta = reward + gamma * next_value * not_done - value
+        gae = delta + gamma * gae_lambda * not_done * next_gae
+        
+        return (gae, value), gae
+    
+    # Initialize: gae beyond horizon is 0, next_value is V(final_obs)
+    num_envs = rollout.final_value.shape[0]
+    init_carry = (jnp.zeros(num_envs), rollout.final_value)
+    
+    _, advantages = jax.lax.scan(
+        _gae_step,
+        init_carry,
+        (rollout.values, rollout.rewards, rollout.dones),
+        reverse=True,
+    )
+    
+    # TD(lambda) returns: advantages + values
+    returns = advantages + rollout.values
+    
+    return RolloutWithGAE(
+        rollout=rollout,
+        advantages=advantages,
+        returns=returns,
+    )
 
 
 def _collect_rollout(
@@ -207,6 +262,10 @@ def _collect_rollout(
     # Unpack transitions: each has shape (num_steps, num_envs, ...)
     obs, actions, log_probs, values, rewards, dones = transitions
     
+    # Compute value for the observation after the final step (for GAE)
+    final_obs = final_env_carry.obs
+    final_value = jnp.asarray(model.apply(model_params, final_obs, method=model.get_value))
+    
     rollout = Rollout(
         obs=obs,
         actions=actions,
@@ -214,8 +273,8 @@ def _collect_rollout(
         values=values,
         rewards=rewards,
         dones=dones,
-        final_obs=final_env_carry.obs,
-        final_env_state=final_env_carry.env_state
+        final_obs=final_obs,
+        final_value=final_value,
     )
     
     # Convert accumulators to metrics, use fallback if no episodes completed
