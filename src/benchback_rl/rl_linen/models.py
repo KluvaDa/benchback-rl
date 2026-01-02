@@ -10,7 +10,7 @@ import jax.numpy as jnp
 from flax.linen.initializers import constant, orthogonal
 
 # Type alias for Flax parameters (nested dict structure)
-Params = dict[str, Any]
+ModelParams = dict[str, Any]
 
 # Factory type: callable that returns an nn.Module
 ModuleFactory = Callable[[], nn.Module]
