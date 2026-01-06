@@ -107,7 +107,6 @@ class PPO:
         # Episode statistics tracking (per-env accumulators)
         self._episode_rewards = torch.zeros(config.num_envs, device=self.device)
         self._episode_lengths = torch.zeros(config.num_envs, dtype=torch.long, device=self.device)
-        self._last_episode_metrics = EpisodeMetrics()
 
         # Random seed everything (use provided seed or generate one based on time)
         seed = self.config.seed if self.config.seed is not None else int(time.time_ns())
@@ -178,22 +177,24 @@ class PPO:
             self._episode_rewards += reward
             self._episode_lengths += 1
 
-            if done.any():
-                done_rewards = self._episode_rewards[done]
-                done_lengths = self._episode_lengths[done]
-                
-                n_completed += done.sum()
-                sum_rewards += done_rewards.sum()
-                sum_lengths += done_lengths.sum()
-                sum_reward_per_step += (done_rewards / done_lengths).sum()
-                min_rewards = torch.minimum(min_rewards, done_rewards.min())
-                max_rewards = torch.maximum(max_rewards, done_rewards.max())
-                min_length = torch.minimum(min_length, done_lengths.min())
-                max_length = torch.maximum(max_length, done_lengths.max())
-                
-                # Reset completed episodes
-                self._episode_rewards[done] = 0
-                self._episode_lengths[done] = 0
+            # Update metrics accumulators for completed episodes (no .any() to avoid sync)
+            # Following the JAX pattern: always compute, mask handles the "no done" case
+            n_completed += done.sum().to(torch.long)
+            sum_rewards += (self._episode_rewards * done).sum()
+            sum_lengths += (self._episode_lengths * done).sum()
+            sum_reward_per_step += (self._episode_rewards / self._episode_lengths * done).sum()
+            min_rewards = torch.minimum(min_rewards,
+                                        torch.where(done, self._episode_rewards, torch.full_like(self._episode_rewards, float("inf"))).min())
+            max_rewards = torch.maximum(max_rewards,
+                                        torch.where(done, self._episode_rewards, torch.full_like(self._episode_rewards, float("-inf"))).max())
+            min_length = torch.minimum(min_length,
+                                       torch.where(done, self._episode_lengths.float(), torch.full((self.config.num_envs,), float("inf"), device=self.device)).min())
+            max_length = torch.maximum(max_length,
+                                       torch.where(done, self._episode_lengths.float(), torch.full((self.config.num_envs,), float("-inf"), device=self.device)).max())
+            
+            # Reset completed episodes (masked assignment)
+            self._episode_rewards = torch.where(done, torch.zeros_like(self._episode_rewards), self._episode_rewards)
+            self._episode_lengths = torch.where(done, torch.zeros_like(self._episode_lengths), self._episode_lengths)
 
 
         # Compute bootstrap value
@@ -203,10 +204,10 @@ class PPO:
         # Compute GAE
         self._compute_gae()
 
-        # Update last known metrics if episodes completed (CPU transfer happens here)
+        # Build episode metrics (NaN values if no episodes completed)
         episodes_completed = n_completed.item()
         if episodes_completed > 0:
-            self._last_episode_metrics = EpisodeMetrics(
+            return EpisodeMetrics(
                 episodes_completed=int(episodes_completed),
                 avg_episode_length=(sum_lengths.float() / n_completed).item(),
                 avg_episode_reward=(sum_rewards / n_completed).item(),
@@ -216,8 +217,9 @@ class PPO:
                 min_episode_length=min_length.item(),
                 max_episode_length=max_length.item(),
             )
-
-        return self._last_episode_metrics
+        else:
+            # Return default metrics with NaN values
+            return EpisodeMetrics()
     
     @torch.no_grad
     def _compute_gae(self) -> None:
@@ -395,10 +397,9 @@ class PPO:
         """Reset environment and prepare for fresh training using internal RNG."""
         obs = self.env.reset()  # reuses the original seed
         self._obs[0] = obs
-        # Reset all episode trackers
+        # Reset episode trackers
         self._episode_rewards.zero_()
         self._episode_lengths.zero_()
-        self._last_episode_metrics = EpisodeMetrics()
 
     def train_from_scratch(self) -> None:
         """Run the full PPO training loop."""
