@@ -21,7 +21,7 @@ from torch.optim.lr_scheduler import LambdaLR
 import wandb
 from tqdm import tqdm
 
-from benchback_rl.environment.torch_env import TorchEnv
+from benchback_rl.rl_torch.env import TorchEnv
 from benchback_rl.rl_torch.models import ActorCritic
 from benchback_rl.rl_common.config import PPOConfig
 from dataclasses import dataclass, field
@@ -63,6 +63,10 @@ class PPO:
         config: PPOConfig,
     ) -> None:
         
+        # Verify config matches expected framework
+        if config.framework != "torch":
+            raise ValueError(f"Expected framework='torch', got '{config.framework}'")
+
         self.device = torch.device("cuda")
 
         # Store arguments
