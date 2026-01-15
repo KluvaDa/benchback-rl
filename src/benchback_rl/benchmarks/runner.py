@@ -7,11 +7,7 @@ from gymnax.environments.spaces import Discrete
 import torch
 import wandb
 
-from benchback_rl.environment.torch_env import TorchEnv
 from benchback_rl.rl_common.config import PPOConfig
-from benchback_rl import rl_torch
-from benchback_rl import rl_linen
-from benchback_rl.rl_linen.models import ModelParams
 from benchback_rl.rl_linen.ppo.rollout import EnvParamsVmapped
 
 # Type alias for gymnax environment (to work around complex union types)
@@ -28,7 +24,8 @@ def run_ppo_benchmark(
         )
 
     if config.framework == "torch":
-        env = TorchEnv(config.env_name, config.num_envs)
+        from benchback_rl import rl_torch
+        env = rl_torch.TorchEnv(config.env_name, config.num_envs)
 
         agent: rl_torch.ActorCritic = rl_torch.DefaultActorCritic(
             obs_dim=env.obs_dim,
@@ -42,6 +39,8 @@ def run_ppo_benchmark(
         torch_ppo.train_from_scratch()
 
     elif config.framework == "linen":
+        from benchback_rl import rl_linen
+        from benchback_rl.rl_linen.models import ModelParams
         # Create gymnax environment directly for JAX/Flax
         env_: Env
         env_params: EnvParamsVmapped
@@ -77,7 +76,39 @@ def run_ppo_benchmark(
         
         linen_ppo.train_from_scratch()
     elif config.framework == "nnx":
-        raise NotImplementedError()
+        from benchback_rl import rl_nnx
+        from flax import nnx
+
+        # Create gymnax environment directly for JAX/Flax
+        env_: Env
+        env_params: EnvParamsVmapped
+        env_, env_params = gymnax.make(config.env_name)
+        
+        # Get action dimension from environment
+        action_space = env_.action_space(env_params)
+        action_dim = cast(Discrete, action_space).n
+        obs_space = env_.observation_space(env_params)
+        obs_dim: int = obs_space.shape[0]
+        
+        # Create model with NNX
+        rngs = nnx.Rngs(config.seed if config.seed is not None else 0)
+        model = rl_nnx.DefaultActorCritic(
+            obs_dim=obs_dim,
+            action_dim=action_dim,
+            hidden_dim=config.hidden_dim,
+            rngs=rngs,
+        )
+        
+        # Create PPO trainer (default jit_mode="nnx")
+        nnx_ppo = rl_nnx.PPO(
+            env=env_,
+            env_params=env_params,
+            model=model,
+            config=config,
+            jit_mode="nnx",
+        )
+        
+        nnx_ppo.train_from_scratch()
     else:
         raise ValueError(f"Unsupported framework: {config.framework}")
 
