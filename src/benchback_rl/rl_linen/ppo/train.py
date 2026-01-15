@@ -97,10 +97,10 @@ class PPO:
             static_argnames=("config", "model", "optimizer"),
         )
 
-    def _time(self) -> float:
+    def _time(self, block_until_ready_object: Any|None = None) -> float:
         """Get current time, optionally syncing JAX first for accurate timing."""
-        if self.config.sync_for_timing:
-            jax.block_until_ready(self._train_state.model_params)
+        if self.config.sync_for_timing and block_until_ready_object is not None:
+            jax.block_until_ready(block_until_ready_object)
         return time.perf_counter()
 
     def _log_hparams(self) -> None:
@@ -146,7 +146,7 @@ class PPO:
         Returns:
             Dict with combined metrics from rollout and update, plus timing info.
         """
-        time_rollout_start = self._time()
+        time_rollout_start = self._time(self._train_state.model_params)
 
         # Split RNG key for rollout
         self._rng_key, rollout_rng_key = jax.random.split(self._rng_key)
@@ -162,7 +162,7 @@ class PPO:
             rng_key=rollout_rng_key,
         )
  
-        time_rollout_end = self._time()
+        time_rollout_end = self._time(rollout_data)
 
         # Split RNG key for update
         self._rng_key, update_rng_key = jax.random.split(self._rng_key)
@@ -177,7 +177,7 @@ class PPO:
             rng_key=update_rng_key,
         )
 
-        time_update_end = self._time()
+        time_update_end = self._time(new_train_state)
 
         # Update mutable state
         self._env_carry = new_env_carry
@@ -202,7 +202,7 @@ class PPO:
 
     def train_from_scratch(self) -> None:
         """Run the full PPO training loop."""
-        time_start = self._time()
+        time_start = self._time(self._train_state.model_params)
         time_step_end = time_start  # for the initial overhead timing
 
         duration_first_step = 0.0
@@ -217,7 +217,7 @@ class PPO:
         pbar = tqdm(range(self.config.num_iterations), desc="Training")
         for iteration in pbar:
             # Timing
-            time_iteration_start = self._time()
+            time_iteration_start = self._time(self._train_state.model_params)
             duration_overhead = time_iteration_start - time_step_end
             if iteration == 0:
                 duration_first_overhead = duration_overhead
@@ -228,7 +228,7 @@ class PPO:
             metrics = self.train_step()
 
             # Timing
-            time_step_end = self._time()
+            time_step_end = self._time(metrics)
             duration_step = time_step_end - time_iteration_start
             if iteration == 0:
                 duration_first_step = duration_step
@@ -259,7 +259,7 @@ class PPO:
         pbar.close()
 
         # Log to WandB - final timings
-        time_end = self._time()
+        time_end = self._time(self._train_state.model_params)
         duration_total = time_end - time_start
         duration_average_second_plus_overhead = duration_second_plus_overhead_sum / max(1, self.config.num_iterations - 1)
         duration_average_second_plus_step = duration_second_plus_step_sum / max(1, self.config.num_iterations - 1)
