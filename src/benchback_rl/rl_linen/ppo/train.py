@@ -146,7 +146,8 @@ class PPO:
         Returns:
             Dict with combined metrics from rollout and update, plus timing info.
         """
-        time_rollout_start = self._time(self._train_state.model_params)
+        # Sync on env_carry.obs to ensure previous iteration's updates are complete
+        time_rollout_start = self._time(self._env_carry.obs)
 
         # Split RNG key for rollout
         self._rng_key, rollout_rng_key = jax.random.split(self._rng_key)
@@ -202,7 +203,7 @@ class PPO:
 
     def train_from_scratch(self) -> None:
         """Run the full PPO training loop."""
-        time_start = self._time(self._train_state.model_params)
+        time_start = self._time()  # No sync needed - nothing pending at start
         time_step_end = time_start  # for the initial overhead timing
 
         duration_first_step = 0.0
@@ -216,8 +217,8 @@ class PPO:
         # Progress bar with key metrics
         pbar = tqdm(range(self.config.num_iterations), desc="Training")
         for iteration in pbar:
-            # Timing
-            time_iteration_start = self._time(self._train_state.model_params)
+            # Timing (no sync needed - metrics dict already converted to Python floats)
+            time_iteration_start = self._time()
             duration_overhead = time_iteration_start - time_step_end
             if iteration == 0:
                 duration_first_overhead = duration_overhead
@@ -258,8 +259,8 @@ class PPO:
 
         pbar.close()
 
-        # Log to WandB - final timings
-        time_end = self._time(self._train_state.model_params)
+        # Log to WandB - final timings (no sync needed - metrics already converted)
+        time_end = self._time()
         duration_total = time_end - time_start
         duration_average_second_plus_overhead = duration_second_plus_overhead_sum / max(1, self.config.num_iterations - 1)
         duration_average_second_plus_step = duration_second_plus_step_sum / max(1, self.config.num_iterations - 1)
