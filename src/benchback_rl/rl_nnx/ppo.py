@@ -161,7 +161,7 @@ class PPO(nnx.Module):
     def _collect_rollout_impl(self) -> dict[str, jax.Array]:
         """Collect rollout data and store in instance variables.
         
-        Uses nnx.fori_loop for torch-like stateful rollout collection.
+        Uses nnx.scan for stateful rollout collection.
         Directly mutates instance buffers (_obs, _actions, etc.) inside the loop.
         
         Returns:
@@ -177,7 +177,8 @@ class PPO(nnx.Module):
         self._min_length.value = jnp.array(jnp.inf)
         self._max_length.value = jnp.array(-jnp.inf)
         
-        def step_fn(i: int, ppo: "PPO") -> "PPO":
+        @nnx.scan(in_axes=(nnx.Carry, 0), out_axes=nnx.Carry)
+        def step_fn(ppo: "PPO", i: jax.Array) -> "PPO":
             """Single rollout step with stateful buffer updates."""
             obs = ppo._obs.value[i]
             action, log_prob, _, value = ppo.model.get_action_and_value(obs)
@@ -219,7 +220,7 @@ class PPO(nnx.Module):
             
             return ppo
         
-        nnx.fori_loop(0, self.config.num_steps, step_fn, self)
+        step_fn(self, jnp.arange(self.config.num_steps))
         
         # Bootstrap value for final observation
         final_obs = self._obs.value[self.config.num_steps]
@@ -245,15 +246,14 @@ class PPO(nnx.Module):
     def _compute_gae_impl(self) -> None:
         """Compute Generalized Advantage Estimation (GAE).
         
-        Uses nnx.fori_loop for stateful GAE computation, passing self through the loop.
+        Uses nnx.scan for stateful GAE computation, passing self through the loop.
         """
         # Reset GAE accumulator
         self._next_gae.value = jnp.zeros((self.env.num_envs,))
         
-        def gae_step(t_from_end: int, ppo: "PPO") -> "PPO":
-            """Single GAE step (iterating backwards)."""
-            t = ppo.config.num_steps - 1 - t_from_end
-            
+        @nnx.scan(in_axes=(nnx.Carry, 0), out_axes=nnx.Carry)
+        def gae_step(ppo: "PPO", t: jax.Array) -> "PPO":
+            """Single GAE step (iterating backwards via reversed indices)."""
             # done[t] indicates episode ended after action[t], so next state is from new episode
             not_done = (~ppo._dones.value[t]).astype(jnp.float32)
             delta = (
@@ -265,7 +265,8 @@ class PPO(nnx.Module):
             ppo._advantages.value = ppo._advantages.value.at[t].set(ppo._next_gae.value)
             return ppo
         
-        nnx.fori_loop(0, self.config.num_steps, gae_step, self)
+        # Scan over reversed indices for backward iteration
+        gae_step(self, jnp.arange(self.config.num_steps - 1, -1, -1))
         
         # TD(lambda) returns: advantages + values
         self._returns.value = self._advantages.value + self._values.value[:self.config.num_steps]
@@ -333,7 +334,7 @@ class PPO(nnx.Module):
     def _update_impl(self) -> dict[str, jax.Array]:
         """Perform PPO update over multiple epochs with minibatch shuffling.
         
-        Uses nnx.fori_loop with self passed through for proper NNX state handling.
+        Uses nnx.scan with self passed through for proper NNX state handling.
         """
         # Flatten all tensors for batching and store in PPOVariables
         self._flat_obs.value = self._obs.value[:self.config.num_steps].reshape(self.config.batch_size, -1)
@@ -351,7 +352,8 @@ class PPO(nnx.Module):
         self._total_approx_kl.value = jnp.array(0.0)
         self._total_clip_frac.value = jnp.array(0.0)
         
-        def minibatch_step(mb_idx: int, ppo: "PPO") -> "PPO":
+        @nnx.scan(in_axes=(nnx.Carry, 0), out_axes=nnx.Carry)
+        def minibatch_step(ppo: "PPO", mb_idx: jax.Array) -> "PPO":
             """Single minibatch update."""
             start = mb_idx * ppo.config.minibatch_size
             batch_indices = jax.lax.dynamic_slice(
@@ -381,16 +383,17 @@ class PPO(nnx.Module):
             ppo._total_clip_frac.value = ppo._total_clip_frac.value + batch_metrics["clip_frac"]
             return ppo
         
-        def epoch_step(epoch: int, ppo: "PPO") -> "PPO":
+        @nnx.scan(in_axes=(nnx.Carry, 0), out_axes=nnx.Carry)
+        def epoch_step(ppo: "PPO", epoch: jax.Array) -> "PPO":
             """Single epoch of minibatch updates."""
             ppo._shuffled_indices.value = jax.random.permutation(
                 ppo.rngs.minibatch(), ppo.config.batch_size
             )
-            nnx.fori_loop(0, ppo.config.num_minibatches, minibatch_step, ppo)
+            minibatch_step(ppo, jnp.arange(ppo.config.num_minibatches))
             return ppo
         
         # Run all epochs
-        nnx.fori_loop(0, self.config.update_epochs, epoch_step, self)
+        epoch_step(self, jnp.arange(self.config.update_epochs))
         
         # Average metrics
         num_updates = self.config.update_epochs * self.config.num_minibatches
