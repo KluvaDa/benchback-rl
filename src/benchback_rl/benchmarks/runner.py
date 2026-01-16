@@ -7,11 +7,7 @@ from gymnax.environments.spaces import Discrete
 import torch
 import wandb
 
-from benchback_rl.environment.torch_env import TorchEnv
 from benchback_rl.rl_common.config import PPOConfig
-from benchback_rl import rl_torch
-from benchback_rl import rl_linen
-from benchback_rl.rl_linen.models import ModelParams
 from benchback_rl.rl_linen.ppo.rollout import EnvParamsVmapped
 
 # Type alias for gymnax environment (to work around complex union types)
@@ -28,7 +24,8 @@ def run_ppo_benchmark(
         )
 
     if config.framework == "torch":
-        env = TorchEnv(config.env_name, config.num_envs)
+        from benchback_rl import rl_torch
+        env = rl_torch.TorchEnv(config.env_name, config.num_envs)
 
         agent: rl_torch.ActorCritic = rl_torch.DefaultActorCritic(
             obs_dim=env.obs_dim,
@@ -42,6 +39,8 @@ def run_ppo_benchmark(
         torch_ppo.train_from_scratch()
 
     elif config.framework == "linen":
+        from benchback_rl import rl_linen
+        from benchback_rl.rl_linen.models import ModelParams
         # Create gymnax environment directly for JAX/Flax
         env_: Env
         env_params: EnvParamsVmapped
@@ -77,7 +76,47 @@ def run_ppo_benchmark(
         
         linen_ppo.train_from_scratch()
     elif config.framework == "nnx":
-        raise NotImplementedError()
+        from benchback_rl import rl_nnx
+        from flax import nnx
+        import jax
+
+        # Create rngs with all required streams from a single seed
+        seed = config.seed if config.seed is not None else 0
+        key = jax.random.PRNGKey(seed)
+        keys = jax.random.split(key, 4)
+        rngs = nnx.Rngs(
+            params=keys[0],     # used in model initialization (nnx.Linear)
+            env=keys[1],        # used in env.reset and env.step
+            action=keys[2],     # used in model action sampling
+            minibatch=keys[3],  # used in PPO minibatch shuffling
+        )
+        
+        # Create NnxVecEnv which wraps gymnax environment
+        env = rl_nnx.NnxVecEnv(
+            env_name=config.env_name,
+            num_envs=config.num_envs,
+            jit=True,
+            rngs=rngs,
+        )
+        
+        # Create model with NNX
+        model = rl_nnx.DefaultActorCritic(
+            obs_dim=env.obs_dim,
+            action_dim=env.num_actions,
+            hidden_dim=config.hidden_dim,
+            rngs=rngs,
+        )
+        
+        # Create PPO trainer
+        nnx_ppo = rl_nnx.PPO(
+            config=config,
+            env=env,
+            model=model,
+            rngs=rngs,
+            jit_mode="nnx.jit",
+        )
+        
+        nnx_ppo.train_from_scratch()
     else:
         raise ValueError(f"Unsupported framework: {config.framework}")
 

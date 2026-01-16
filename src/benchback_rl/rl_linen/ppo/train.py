@@ -98,7 +98,10 @@ class PPO:
         )
 
     def _time(self, block_until_ready_object: Any|None = None) -> float:
+    def _time(self, block_until_ready_object: Any|None = None) -> float:
         """Get current time, optionally syncing JAX first for accurate timing."""
+        if self.config.sync_for_timing and block_until_ready_object is not None:
+            jax.block_until_ready(block_until_ready_object)
         if self.config.sync_for_timing and block_until_ready_object is not None:
             jax.block_until_ready(block_until_ready_object)
         return time.perf_counter()
@@ -146,7 +149,8 @@ class PPO:
         Returns:
             Dict with combined metrics from rollout and update, plus timing info.
         """
-        time_rollout_start = self._time(self._train_state.model_params)
+        # Sync on env_carry.obs to ensure previous iteration's updates are complete
+        time_rollout_start = self._time(self._env_carry.obs)
 
         # Split RNG key for rollout
         self._rng_key, rollout_rng_key = jax.random.split(self._rng_key)
@@ -163,6 +167,7 @@ class PPO:
         )
  
         time_rollout_end = self._time(rollout_data)
+        time_rollout_end = self._time(rollout_data)
 
         # Split RNG key for update
         self._rng_key, update_rng_key = jax.random.split(self._rng_key)
@@ -177,6 +182,7 @@ class PPO:
             rng_key=update_rng_key,
         )
 
+        time_update_end = self._time(new_train_state)
         time_update_end = self._time(new_train_state)
 
         # Update mutable state
@@ -202,7 +208,7 @@ class PPO:
 
     def train_from_scratch(self) -> None:
         """Run the full PPO training loop."""
-        time_start = self._time(self._train_state.model_params)
+        time_start = self._time()  # No sync needed - nothing pending at start
         time_step_end = time_start  # for the initial overhead timing
 
         duration_first_step = 0.0
@@ -216,8 +222,8 @@ class PPO:
         # Progress bar with key metrics
         pbar = tqdm(range(self.config.num_iterations), desc="Training")
         for iteration in pbar:
-            # Timing
-            time_iteration_start = self._time(self._train_state.model_params)
+            # Timing (no sync needed - metrics dict already converted to Python floats)
+            time_iteration_start = self._time()
             duration_overhead = time_iteration_start - time_step_end
             if iteration == 0:
                 duration_first_overhead = duration_overhead
@@ -228,6 +234,7 @@ class PPO:
             metrics = self.train_step()
 
             # Timing
+            time_step_end = self._time(metrics)
             time_step_end = self._time(metrics)
             duration_step = time_step_end - time_iteration_start
             if iteration == 0:
@@ -258,8 +265,8 @@ class PPO:
 
         pbar.close()
 
-        # Log to WandB - final timings
-        time_end = self._time(self._train_state.model_params)
+        # Log to WandB - final timings (no sync needed - metrics already converted)
+        time_end = self._time()
         duration_total = time_end - time_start
         duration_average_second_plus_overhead = duration_second_plus_overhead_sum / max(1, self.config.num_iterations - 1)
         duration_average_second_plus_step = duration_second_plus_step_sum / max(1, self.config.num_iterations - 1)

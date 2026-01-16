@@ -5,7 +5,7 @@ import jax.numpy as jnp
 import pytest
 import torch
 
-from benchback_rl.environment.torch_env import (
+from benchback_rl.rl_torch.env import (
     TorchEnv,
     jax_pytree_to_torch,
     jax_to_torch,

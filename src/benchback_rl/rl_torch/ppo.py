@@ -21,7 +21,7 @@ from torch.optim.lr_scheduler import LambdaLR
 import wandb
 from tqdm import tqdm
 
-from benchback_rl.environment.torch_env import TorchEnv
+from benchback_rl.rl_torch.env import TorchEnv
 from benchback_rl.rl_torch.models import ActorCritic
 from benchback_rl.rl_common.config import PPOConfig
 from dataclasses import dataclass, field
@@ -63,6 +63,10 @@ class PPO:
         config: PPOConfig,
     ) -> None:
         
+        # Verify config matches expected framework
+        if config.framework != "torch":
+            raise ValueError(f"Expected framework='torch', got '{config.framework}'")
+
         self.device = torch.device("cuda")
 
         # Store arguments
@@ -364,6 +368,14 @@ class PPO:
             "explained_variance": explained_var,
         }
 
+    def reset(self) -> None:
+        """Reset environment and prepare for fresh training using internal RNG."""
+        obs = self.env.reset()  # reuses the original seed
+        self._obs[0] = obs
+        # Reset episode trackers
+        self._episode_rewards.zero_()
+        self._episode_lengths.zero_()
+
     def train_step(self) -> dict[str, float]:
         """Perform one complete training step (rollout + update).
         
@@ -392,14 +404,6 @@ class PPO:
         metrics["duration_rollout"] = time_rollout_end - time_rollout_start
         metrics["duration_update"] = time_update_end - time_rollout_end
         return metrics
-
-    def reset(self) -> None:
-        """Reset environment and prepare for fresh training using internal RNG."""
-        obs = self.env.reset()  # reuses the original seed
-        self._obs[0] = obs
-        # Reset episode trackers
-        self._episode_rewards.zero_()
-        self._episode_lengths.zero_()
 
     def train_from_scratch(self) -> None:
         """Run the full PPO training loop."""
