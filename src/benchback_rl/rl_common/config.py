@@ -18,6 +18,9 @@ class PPOConfig:
     update_epochs: int  # number of epochs per update
     num_iterations: int  # training iterations, number of train_step calls
     
+    # framework specific parameters
+    nnx_jit_mode: str = ""
+
     # network parameters
     hidden_dim: int = 64 # hidden dimension of actor-critic network
 

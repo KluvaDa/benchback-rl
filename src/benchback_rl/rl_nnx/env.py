@@ -15,11 +15,8 @@ from gymnax.environments import spaces
 # Type aliases for gymnax environments
 Env = Any
 EnvParams = Any
-EnvState = Any
 
-
-class State(nnx.Variable):
-    """State variable for NnxVecEnv."""
+class EnvState(nnx.Variable):
     pass
 
 
@@ -52,11 +49,11 @@ class NnxVecEnv(nnx.Module):
 
         Args:
             env_name: Name of the gymnax environment.
-            un_envs: Number of parallel environments.
-            rngs: NNX Rngs object for random number generation. 
+            num_envs: Number of parallel environments.
+            rngs: NNX Rngs object for random number generation. using rngs.env()
         """
         # Declaring stateful variables
-        self.state: State
+        self.state: EnvState
         self.rngs: nnx.Rngs = rngs
 
         # Declaring static variables
@@ -87,12 +84,14 @@ class NnxVecEnv(nnx.Module):
             raise ValueError(f"Only 1D observations supported (no images), got shape {obs_space.shape}")
         self.obs_dim = obs_space.shape[0]
 
+        # Initialize state variable (will be properly set during reset())
+        self.state = EnvState(None)
+
         # vmap over: keys (num_envs,), state (num_envs, ...), action (num_envs, ...)
         # params are shared (not vmapped)
         self.reset_fn = jax.vmap(self.env.reset, in_axes=(0, None))
         self.step_fn = jax.vmap(self.env.step, in_axes=(0, 0, 0, None))
         
-
         # JIT compile if specified
         if jit:
             self.reset_fn = jax.jit(self.reset_fn)
@@ -104,7 +103,7 @@ class NnxVecEnv(nnx.Module):
         Returns:
             Initial observations, shape (num_envs, obs_dim).
         """
-        reset_keys = jax.random.split(self.rngs(), self.num_envs)
+        reset_keys = jax.random.split(self.rngs.env(), self.num_envs)
         obs, self.state.value = self.reset_fn(reset_keys, self.env_params)
         
         return obs
@@ -122,7 +121,7 @@ class NnxVecEnv(nnx.Module):
                 - dones: Done flags, shape (num_envs,)
                 - info: Dict with episode info (rewards/lengths for completed episodes)
         """
-        step_keys = jax.random.split(self.rngs(), self.num_envs)
+        step_keys = jax.random.split(self.rngs.env(), self.num_envs)
         
         next_obs, next_state, rewards, dones, info = self.step_fn(
             step_keys, self.state.value, actions, self.env_params

@@ -77,8 +77,9 @@ class ActorCritic(nnx.Module):
 
     actor: MLP
     critic: MLP
+    rngs: nnx.Rngs
 
-    def __init__(self, actor: MLP, critic: MLP):
+    def __init__(self, actor: MLP, critic: MLP, rngs: nnx.Rngs):
         """Initialize ActorCritic.
         
         Args:
@@ -86,9 +87,11 @@ class ActorCritic(nnx.Module):
                    logits of shape (batch, action_dim).
             critic: MLP that takes observations (batch, obs_dim) and outputs
                     values of shape (batch, 1).
+            rngs: NNX random number generators for action sampling.
         """
         self.actor = actor
         self.critic = critic
+        self.rngs = rngs
 
     def __call__(self, obs: jax.Array) -> tuple[jax.Array, jax.Array]:
         """Forward pass returning both actor logits and critic value.
@@ -119,17 +122,15 @@ class ActorCritic(nnx.Module):
     def get_action_and_value(
         self,
         obs: jax.Array,
-        rng_key: jax.Array,
         action: jax.Array | None = None,
     ) -> tuple[jax.Array, jax.Array, jax.Array, jax.Array]:
         """Get action, log probability, entropy, and value.
 
         If action is provided, compute log_prob and entropy for that action.
-        Otherwise, sample a new action.
+        Otherwise, sample a new action using stateful rngs.
 
         Args:
             obs: Observations of shape (batch, obs_dim).
-            rng_key: PRNG key for sampling (ignored if action is provided).
             action: Optional actions of shape (batch,). If None, actions are sampled.
 
         Returns:
@@ -142,7 +143,7 @@ class ActorCritic(nnx.Module):
         logits = self.actor(obs)
 
         if action is None:
-            action = jax.random.categorical(rng_key, logits)
+            action = jax.random.categorical(self.rngs.action(), logits)
 
         log_probs = jax.nn.log_softmax(logits, axis=-1)
         log_prob = jnp.take_along_axis(log_probs, action[..., None], axis=-1).squeeze(-1)
@@ -185,4 +186,4 @@ def DefaultActorCritic(
         final_std=1.0,
         rngs=rngs,
     )
-    return ActorCritic(actor, critic)
+    return ActorCritic(actor, critic, rngs)

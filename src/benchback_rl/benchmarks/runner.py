@@ -78,34 +78,42 @@ def run_ppo_benchmark(
     elif config.framework == "nnx":
         from benchback_rl import rl_nnx
         from flax import nnx
+        import jax
 
-        # Create gymnax environment directly for JAX/Flax
-        env_: Env
-        env_params: EnvParamsVmapped
-        env_, env_params = gymnax.make(config.env_name)
+        # Create rngs with all required streams from a single seed
+        seed = config.seed if config.seed is not None else 0
+        key = jax.random.PRNGKey(seed)
+        keys = jax.random.split(key, 4)
+        rngs = nnx.Rngs(
+            params=keys[0],     # used in model initialization (nnx.Linear)
+            env=keys[1],        # used in env.reset and env.step
+            action=keys[2],     # used in model action sampling
+            minibatch=keys[3],  # used in PPO minibatch shuffling
+        )
         
-        # Get action dimension from environment
-        action_space = env_.action_space(env_params)
-        action_dim = cast(Discrete, action_space).n
-        obs_space = env_.observation_space(env_params)
-        obs_dim: int = obs_space.shape[0]
+        # Create NnxVecEnv which wraps gymnax environment
+        env = rl_nnx.NnxVecEnv(
+            env_name=config.env_name,
+            num_envs=config.num_envs,
+            jit=True,
+            rngs=rngs,
+        )
         
         # Create model with NNX
-        rngs = nnx.Rngs(config.seed if config.seed is not None else 0)
         model = rl_nnx.DefaultActorCritic(
-            obs_dim=obs_dim,
-            action_dim=action_dim,
+            obs_dim=env.obs_dim,
+            action_dim=env.num_actions,
             hidden_dim=config.hidden_dim,
             rngs=rngs,
         )
         
-        # Create PPO trainer (default jit_mode="nnx")
+        # Create PPO trainer
         nnx_ppo = rl_nnx.PPO(
-            env=env_,
-            env_params=env_params,
-            model=model,
             config=config,
-            jit_mode="nnx",
+            env=env,
+            model=model,
+            rngs=rngs,
+            jit_mode="nnx.jit",
         )
         
         nnx_ppo.train_from_scratch()
