@@ -61,6 +61,7 @@ class PPO:
         env: TorchEnv,
         agent: ActorCritic,
         config: PPOConfig,
+        start_time: float | None = None,
     ) -> None:
         
         # Verify config matches expected framework
@@ -73,6 +74,7 @@ class PPO:
         self.config = config
         self.env = env
         self.agent = agent
+        self.start_time = start_time
 
         # Verify and store environment dimensions
         if env.num_envs != config.num_envs:
@@ -204,9 +206,6 @@ class PPO:
         # Compute bootstrap value
         final_value = self.agent.get_value(self._obs[self.config.num_steps])
         self._values[self.config.num_steps] = final_value
-
-        # Compute GAE
-        self._compute_gae()
 
         # Build episode metrics (NaN values if no episodes completed)
         episodes_completed = n_completed.item()
@@ -390,7 +389,10 @@ class PPO:
         # Collect rollout (also computes episode stats)
         episode_metrics = self._collect_rollout()
         
-        time_rollout_end = self._time()
+        # Compute GAE
+        self._compute_gae()
+        
+        time_update_start = self._time()
         
         # Perform update
         update_metrics = self._update()
@@ -401,49 +403,50 @@ class PPO:
         self._obs[0] = self._obs[self.config.num_steps]
 
         metrics = episode_metrics.to_dict() | update_metrics
-        metrics["duration_rollout"] = time_rollout_end - time_rollout_start
-        metrics["duration_update"] = time_update_end - time_rollout_end
+        metrics["duration_rollout"] = time_update_start - time_rollout_start
+        metrics["duration_update"] = time_update_end - time_update_start
         return metrics
 
     def train_from_scratch(self) -> None:
         """Run the full PPO training loop."""
-        time_start = self._time()
-        time_step_end = time_start # for the initial overhead timing
+        # Use start_time passed from runner for initial overhead, or fallback to now
+        time_start = self.start_time if self.start_time is not None else self._time()
 
-        duration_first_step = 0
-        duration_first_overhead = 0
-        duration_second_plus_step_sum = 0
-        duration_second_plus_overhead_sum = 0
+        duration_first_iteration = 0.0
+        duration_second_plus_sum = 0.0
+        duration_rollout_sum = 0.0
+        duration_update_sum = 0.0
         
         self.reset()
         self._log_hparams()
         
+        # Calculate initial overhead (time from start to first iteration)
+        time_first_iteration_start = self._time()
+        duration_initial_overhead = time_first_iteration_start - time_start
+        
         # Progress bar with key metrics
         pbar = tqdm(range(self.config.num_iterations), desc="Training")
         for iteration in pbar:
-            # Timing
-            time_iteration_start = self._time()  # initialise for first reading to log overhead
-            duration_overhead = time_iteration_start - time_step_end
-            if iteration == 0:
-                duration_first_overhead = duration_overhead
-            else:
-                duration_second_plus_overhead_sum += duration_overhead
+            time_iteration_start = self._time()
 
             # TRAINING STEP - the only functional (non-logging) line in the loop
             metrics = self.train_step()
             
             # Timing
-            time_step_end = self._time()
-            duration_step = time_step_end - time_iteration_start
+            time_iteration_end = self._time()
+            duration_iteration = time_iteration_end - time_iteration_start
+            
             if iteration == 0:
-                duration_first_step = duration_step
+                duration_first_iteration = duration_iteration
             else:
-                duration_second_plus_step_sum += duration_step
+                duration_second_plus_sum += duration_iteration
+            
+            # Accumulate component timings
+            duration_rollout_sum += metrics["duration_rollout"]
+            duration_update_sum += metrics["duration_update"]
 
-            metrics["duration_step"] = duration_step
-            metrics["duration_step_overhead"] = duration_step - metrics["duration_rollout"] - metrics["duration_update"]
-            metrics["duration_overhead"] = duration_overhead
-            metrics["time_elapsed"] = time_step_end - time_start
+            metrics["duration_iteration"] = duration_iteration
+            metrics["time_elapsed"] = time_iteration_end - time_start
             
             # Log to WandB
             self._log_metrics(metrics, iteration)
@@ -463,22 +466,27 @@ class PPO:
         
         pbar.close()
         
-        # Log to WandB - final timings
+        # Final timings
         time_end = self._time()
         duration_total = time_end - time_start
-        duration_average_second_plus_overhead = duration_second_plus_overhead_sum / max(1, self.config.num_iterations - 1)
-        duration_average_second_plus_step = duration_second_plus_step_sum / max(1, self.config.num_iterations - 1)
+        num_second_plus = max(1, self.config.num_iterations - 1)
+        duration_avg_second_plus = duration_second_plus_sum / num_second_plus
+        duration_avg_rollout = duration_rollout_sum / self.config.num_iterations
+        duration_avg_update = duration_update_sum / self.config.num_iterations
+        
         self._log_summary({
             "duration_total": duration_total,
-            "duration_first_step": duration_first_step,
-            "duration_first_overhead": duration_first_overhead,
-            "duration_average_second_plus_step": duration_average_second_plus_step,
-            "duration_average_second_plus_overhead": duration_average_second_plus_overhead,
+            "duration_initial_overhead": duration_initial_overhead,
+            "duration_first_iteration": duration_first_iteration,
+            "duration_avg_second_plus_iteration": duration_avg_second_plus,
+            "duration_avg_rollout": duration_avg_rollout,
+            "duration_avg_update": duration_avg_update,
         })
 
         # Final summary
         print(f"\nTraining completed in {duration_total/60:.1f} minutes")
-        print(f"First iteration time: {duration_first_step+duration_first_overhead:.3f}s ")
-        print(f"Average time per iteration (excluding first): "
-              f"{duration_average_second_plus_step+duration_average_second_plus_overhead:.3f}s ")
+        print(f"Initial overhead: {duration_initial_overhead:.3f}s")
+        print(f"First iteration: {duration_first_iteration:.3f}s")
+        print(f"Average iteration (2nd+): {duration_avg_second_plus:.3f}s")
+        print(f"  Avg rollout: {duration_avg_rollout:.4f}s, Avg update: {duration_avg_update:.4f}s")
         print(f"Final average reward: {reward_str}")

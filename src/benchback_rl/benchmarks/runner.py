@@ -17,6 +17,9 @@ Env = Any
 def run_ppo_benchmark(
     config: PPOConfig) -> None:
     """Run a PPO training benchmark."""
+    import time
+    start_time = time.perf_counter()  # Capture at very beginning for initial overhead
+    
     if config.use_wandb:
         # config is saved in the train method
         wandb.init(
@@ -34,7 +37,7 @@ def run_ppo_benchmark(
         )
         # torch.compile provides ~2x speedup for the model forward pass
         agent = torch.compile(agent)  # type: ignore[assignment]
-        torch_ppo = rl_torch.PPO(env=env, agent=agent, config=config)
+        torch_ppo = rl_torch.PPO(env=env, agent=agent, config=config, start_time=start_time)
 
         torch_ppo.train_from_scratch()
 
@@ -72,6 +75,7 @@ def run_ppo_benchmark(
             model=model,
             model_params=model_params,
             config=config,
+            start_time=start_time,
         )
         
         linen_ppo.train_from_scratch()
@@ -114,6 +118,7 @@ def run_ppo_benchmark(
             model=model,
             rngs=rngs,
             jit_mode="nnx.jit",
+            start_time=start_time,
         )
         
         nnx_ppo.train_from_scratch()

@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from benchback_rl.rl_common import PPOConfig
 from benchback_rl.rl_linen.models import ActorCritic, ModelParams
-from benchback_rl.rl_linen.ppo.rollout import EnvCarry, rollout_with_gae
+from benchback_rl.rl_linen.ppo.rollout import EnvCarry, RolloutWithGAE, collect_rollout, compute_gae
 from benchback_rl.rl_linen.ppo.update import update, TrainState
 
 # Type aliases for gymnax environments
@@ -32,6 +32,7 @@ class PPO:
         model: ActorCritic,
         model_params: ModelParams,
         config: PPOConfig,
+        start_time: float | None = None,
     ) -> None:
         """Initialize PPO trainer.
         
@@ -43,11 +44,13 @@ class PPO:
             model: ActorCritic Flax module.
             model_params: Initial model parameters.
             config: PPO configuration.
+            start_time: Time at beginning of main for initial overhead calculation.
         """
         self.config = config
         self.env = env
         self.env_params = env_params
         self.model = model
+        self.start_time = start_time
 
         # Verify config matches expected framework
         if config.framework != "linen":
@@ -88,9 +91,13 @@ class PPO:
         self._env_carry: EnvCarry
 
         # JIT compile core functions with static arguments
-        self._rollout_jit = jax.jit(
-            rollout_with_gae,
+        self._collect_rollout_jit = jax.jit(
+            collect_rollout,
             static_argnames=("config", "env_step_fn", "model"),
+        )
+        self._compute_gae_jit = jax.jit(
+            compute_gae,
+            static_argnames=("gamma", "gae_lambda"),
         )
         self._update_jit = jax.jit(
             update,
@@ -99,8 +106,6 @@ class PPO:
 
     def _time(self, block_until_ready_object: Any|None = None) -> float:
         """Get current time, optionally syncing JAX first for accurate timing."""
-        if self.config.sync_for_timing and block_until_ready_object is not None:
-            jax.block_until_ready(block_until_ready_object)
         if self.config.sync_for_timing and block_until_ready_object is not None:
             jax.block_until_ready(block_until_ready_object)
         return time.perf_counter()
@@ -154,19 +159,43 @@ class PPO:
         # Split RNG key for rollout
         self._rng_key, rollout_rng_key = jax.random.split(self._rng_key)
 
-        # Collect rollout with GAE computation
-        rollout_data, new_env_carry, episode_metrics = self._rollout_jit(
+        # Collect rollout (without GAE)
+        (obs, actions, log_probs, values, rewards, dones,
+         final_obs, final_value, new_env_carry, episode_metrics) = self._collect_rollout_jit(
             config=self.config,
-            env_step_fn=self._env_step,  # Pass vmapped step function
+            env_step_fn=self._env_step,
             env_params=self.env_params,
             env_carry=self._env_carry,
             model=self.model,
             model_params=self._train_state.model_params,
             rng_key=rollout_rng_key,
         )
- 
-        time_rollout_end = self._time(rollout_data)
-        time_rollout_end = self._time(rollout_data)
+
+        # Compute GAE
+        advantages, returns = self._compute_gae_jit(
+            values=values,
+            rewards=rewards,
+            dones=dones,
+            final_value=final_value,
+            gamma=self.config.gamma,
+            gae_lambda=self.config.gae_lambda,
+        )
+
+        # Build RolloutWithGAE dataclass for update
+        rollout_data = RolloutWithGAE(
+            obs=obs,
+            actions=actions,
+            log_probs=log_probs,
+            values=values,
+            rewards=rewards,
+            dones=dones,
+            final_obs=final_obs,
+            final_value=final_value,
+            advantages=advantages,
+            returns=returns,
+        )
+
+        time_update_start = self._time(rollout_data)
 
         # Split RNG key for update
         self._rng_key, update_rng_key = jax.random.split(self._rng_key)
@@ -181,7 +210,6 @@ class PPO:
             rng_key=update_rng_key,
         )
 
-        time_update_end = self._time(new_train_state)
         time_update_end = self._time(new_train_state)
 
         # Update mutable state
@@ -200,51 +228,51 @@ class PPO:
             metrics[key] = float(value)
 
         # Timing metrics
-        metrics["duration_rollout"] = time_rollout_end - time_rollout_start
-        metrics["duration_update"] = time_update_end - time_rollout_end
+        metrics["duration_rollout"] = time_update_start - time_rollout_start
+        metrics["duration_update"] = time_update_end - time_update_start
 
         return metrics
 
     def train_from_scratch(self) -> None:
         """Run the full PPO training loop."""
-        time_start = self._time()  # No sync needed - nothing pending at start
-        time_step_end = time_start  # for the initial overhead timing
+        # Use start_time passed from runner for initial overhead, or fallback to now
+        time_start = self.start_time if self.start_time is not None else self._time()
 
-        duration_first_step = 0.0
-        duration_first_overhead = 0.0
-        duration_second_plus_step_sum = 0.0
-        duration_second_plus_overhead_sum = 0.0
+        duration_first_iteration = 0.0
+        duration_second_plus_sum = 0.0
+        duration_rollout_sum = 0.0
+        duration_update_sum = 0.0
 
         self.reset()
         self._log_hparams()
 
+        # Calculate initial overhead (time from start to first iteration)
+        time_first_iteration_start = self._time()
+        duration_initial_overhead = time_first_iteration_start - time_start
+
         # Progress bar with key metrics
         pbar = tqdm(range(self.config.num_iterations), desc="Training")
         for iteration in pbar:
-            # Timing (no sync needed - metrics dict already converted to Python floats)
             time_iteration_start = self._time()
-            duration_overhead = time_iteration_start - time_step_end
-            if iteration == 0:
-                duration_first_overhead = duration_overhead
-            else:
-                duration_second_plus_overhead_sum += duration_overhead
 
             # TRAINING STEP - the only functional (non-logging) line in the loop
             metrics = self.train_step()
 
             # Timing
-            time_step_end = self._time(metrics)
-            time_step_end = self._time(metrics)
-            duration_step = time_step_end - time_iteration_start
-            if iteration == 0:
-                duration_first_step = duration_step
-            else:
-                duration_second_plus_step_sum += duration_step
+            time_iteration_end = self._time(metrics)
+            duration_iteration = time_iteration_end - time_iteration_start
 
-            metrics["duration_step"] = duration_step
-            metrics["duration_step_overhead"] = duration_step - metrics["duration_rollout"] - metrics["duration_update"]
-            metrics["duration_overhead"] = duration_overhead
-            metrics["time_elapsed"] = time_step_end - time_start
+            if iteration == 0:
+                duration_first_iteration = duration_iteration
+            else:
+                duration_second_plus_sum += duration_iteration
+
+            # Accumulate component timings
+            duration_rollout_sum += metrics["duration_rollout"]
+            duration_update_sum += metrics["duration_update"]
+
+            metrics["duration_iteration"] = duration_iteration
+            metrics["time_elapsed"] = time_iteration_end - time_start
 
             # Log to WandB
             self._log_metrics(metrics, iteration)
@@ -264,22 +292,27 @@ class PPO:
 
         pbar.close()
 
-        # Log to WandB - final timings (no sync needed - metrics already converted)
+        # Final timings
         time_end = self._time()
         duration_total = time_end - time_start
-        duration_average_second_plus_overhead = duration_second_plus_overhead_sum / max(1, self.config.num_iterations - 1)
-        duration_average_second_plus_step = duration_second_plus_step_sum / max(1, self.config.num_iterations - 1)
+        num_second_plus = max(1, self.config.num_iterations - 1)
+        duration_avg_second_plus = duration_second_plus_sum / num_second_plus
+        duration_avg_rollout = duration_rollout_sum / self.config.num_iterations
+        duration_avg_update = duration_update_sum / self.config.num_iterations
+
         self._log_summary({
             "duration_total": duration_total,
-            "duration_first_step": duration_first_step,
-            "duration_first_overhead": duration_first_overhead,
-            "duration_average_second_plus_step": duration_average_second_plus_step,
-            "duration_average_second_plus_overhead": duration_average_second_plus_overhead,
+            "duration_initial_overhead": duration_initial_overhead,
+            "duration_first_iteration": duration_first_iteration,
+            "duration_avg_second_plus_iteration": duration_avg_second_plus,
+            "duration_avg_rollout": duration_avg_rollout,
+            "duration_avg_update": duration_avg_update,
         })
 
         # Final summary
         print(f"\nTraining completed in {duration_total/60:.1f} minutes")
-        print(f"First iteration time: {duration_first_step+duration_first_overhead:.3f}s ")
-        print(f"Average time per iteration (excluding first): "
-              f"{duration_average_second_plus_step+duration_average_second_plus_overhead:.3f}s ")
+        print(f"Initial overhead: {duration_initial_overhead:.3f}s")
+        print(f"First iteration: {duration_first_iteration:.3f}s")
+        print(f"Average iteration (2nd+): {duration_avg_second_plus:.3f}s")
+        print(f"  Avg rollout: {duration_avg_rollout:.4f}s, Avg update: {duration_avg_update:.4f}s")
         print(f"Final average reward: {reward_str}")

@@ -39,7 +39,8 @@ class PPO(nnx.Module):
         env: NnxVecEnv,
         model: ActorCritic,
         rngs: nnx.Rngs,
-        jit_mode: str = "nnx.jit"
+        jit_mode: str = "nnx.jit",
+        start_time: float | None = None,
     ) -> None:
         """
         Args:
@@ -48,6 +49,7 @@ class PPO(nnx.Module):
             model: ActorCritic model instance.
             rngs: nnx.Rngs object used with rngs.minibatch()
             jit_mode: JIT compilation mode: "nnx.jit" or "cached_partial".
+            start_time: Time at beginning of main for initial overhead calculation.
         """
         if config.framework != "nnx":
             raise ValueError(f"Expected framework='nnx', got '{config.framework}'")
@@ -57,6 +59,7 @@ class PPO(nnx.Module):
         self.env = env  # stateful nnx.Module
         self.model = model # stateful nnx.Module
         self.rngs = rngs  # stateful nnx.Rngs
+        self.start_time = start_time
 
         # Optimizer with linear LR decay
         schedule = optax.linear_schedule(
@@ -429,10 +432,10 @@ class PPO(nnx.Module):
         # Collect rollout
         rollout_metrics = self._collect_rollout()
 
-        time_rollout_end = self._time(rollout_metrics)
-
         # compute GAE advantages and returns
         self._compute_gae()
+
+        time_update_start = self._time(self._advantages.value)
 
         # Perform PPO update
         update_metrics = self._update()
@@ -444,34 +447,32 @@ class PPO(nnx.Module):
 
         # Combine all metrics
         metrics = {**rollout_metrics, **update_metrics}
-        metrics["duration_rollout"] = time_rollout_end - time_rollout_start
-        metrics["duration_update"] = time_update_end - time_rollout_end
+        metrics["duration_rollout"] = time_update_start - time_rollout_start
+        metrics["duration_update"] = time_update_end - time_update_start
 
         return metrics
 
     def train_from_scratch(self) -> None:
         """Run the full PPO training loop."""
-        time_start = self._time()  # No sync needed - nothing pending at start
-        time_step_end = time_start  # for the initial overhead timing
+        # Use start_time passed from runner for initial overhead, or fallback to now
+        time_start = self.start_time if self.start_time is not None else self._time()
 
-        duration_first_step = 0.0
-        duration_first_overhead = 0.0
-        duration_second_plus_step_sum = 0.0
-        duration_second_plus_overhead_sum = 0.0
+        duration_first_iteration = 0.0
+        duration_second_plus_sum = 0.0
+        duration_rollout_sum = 0.0
+        duration_update_sum = 0.0
 
         self.reset()
         self._log_hparams()
 
+        # Calculate initial overhead (time from start to first iteration)
+        time_first_iteration_start = self._time()
+        duration_initial_overhead = time_first_iteration_start - time_start
+
         # Progress bar with key metrics
         pbar = tqdm(range(self.config.num_iterations), desc="Training")
         for iteration in pbar:
-            # Timing (no sync needed - metrics dict already converted to Python floats)
             time_iteration_start = self._time()
-            duration_overhead = time_iteration_start - time_step_end
-            if iteration == 0:
-                duration_first_overhead = duration_overhead
-            else:
-                duration_second_plus_overhead_sum += duration_overhead
 
             # TRAINING STEP - the only functional (non-logging) line in the loop
             jax_metrics = self.train_step()
@@ -480,17 +481,20 @@ class PPO(nnx.Module):
             metrics: dict[str, float] = {k: float(v) for k, v in jax_metrics.items()}
 
             # Timing
-            time_step_end = self._time()
-            duration_step = time_step_end - time_iteration_start
-            if iteration == 0:
-                duration_first_step = duration_step
-            else:
-                duration_second_plus_step_sum += duration_step
+            time_iteration_end = self._time()
+            duration_iteration = time_iteration_end - time_iteration_start
 
-            metrics["duration_step"] = duration_step
-            metrics["duration_step_overhead"] = duration_step - metrics["duration_rollout"] - metrics["duration_update"]
-            metrics["duration_overhead"] = duration_overhead
-            metrics["time_elapsed"] = time_step_end - time_start
+            if iteration == 0:
+                duration_first_iteration = duration_iteration
+            else:
+                duration_second_plus_sum += duration_iteration
+
+            # Accumulate component timings
+            duration_rollout_sum += metrics["duration_rollout"]
+            duration_update_sum += metrics["duration_update"]
+
+            metrics["duration_iteration"] = duration_iteration
+            metrics["time_elapsed"] = time_iteration_end - time_start
 
             # Log to WandB
             self._log_metrics(metrics, iteration)
@@ -510,22 +514,27 @@ class PPO(nnx.Module):
 
         pbar.close()
 
-        # Log to WandB - final timings (no sync needed - metrics already converted)
+        # Final timings
         time_end = self._time()
         duration_total = time_end - time_start
-        duration_average_second_plus_overhead = duration_second_plus_overhead_sum / max(1, self.config.num_iterations - 1)
-        duration_average_second_plus_step = duration_second_plus_step_sum / max(1, self.config.num_iterations - 1)
+        num_second_plus = max(1, self.config.num_iterations - 1)
+        duration_avg_second_plus = duration_second_plus_sum / num_second_plus
+        duration_avg_rollout = duration_rollout_sum / self.config.num_iterations
+        duration_avg_update = duration_update_sum / self.config.num_iterations
+
         self._log_summary({
             "duration_total": duration_total,
-            "duration_first_step": duration_first_step,
-            "duration_first_overhead": duration_first_overhead,
-            "duration_average_second_plus_step": duration_average_second_plus_step,
-            "duration_average_second_plus_overhead": duration_average_second_plus_overhead,
+            "duration_initial_overhead": duration_initial_overhead,
+            "duration_first_iteration": duration_first_iteration,
+            "duration_avg_second_plus_iteration": duration_avg_second_plus,
+            "duration_avg_rollout": duration_avg_rollout,
+            "duration_avg_update": duration_avg_update,
         })
 
         # Final summary
         print(f"\nTraining completed in {duration_total/60:.1f} minutes")
-        print(f"First iteration time: {duration_first_step+duration_first_overhead:.3f}s ")
-        print(f"Average time per iteration (excluding first): "
-              f"{duration_average_second_plus_step+duration_average_second_plus_overhead:.3f}s ")
+        print(f"Initial overhead: {duration_initial_overhead:.3f}s")
+        print(f"First iteration: {duration_first_iteration:.3f}s")
+        print(f"Average iteration (2nd+): {duration_avg_second_plus:.3f}s")
+        print(f"  Avg rollout: {duration_avg_rollout:.4f}s, Avg update: {duration_avg_update:.4f}s")
         print(f"Final average reward: {reward_str}")

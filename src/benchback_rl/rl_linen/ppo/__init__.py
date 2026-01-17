@@ -7,6 +7,8 @@ from benchback_rl.rl_linen.ppo.rollout import (
     RolloutWithGAE,
     EpisodeMetricsAccum,
     rollout_with_gae,
+    collect_rollout,
+    compute_gae,
 )
 from benchback_rl.rl_linen.ppo.update import update, UpdateMetricsAccum
 
@@ -17,6 +19,8 @@ __all__ = [
     "RolloutWithGAE",
     "EpisodeMetricsAccum",
     "rollout_with_gae",
+    "collect_rollout",
+    "compute_gae",
     "update",
     "UpdateMetricsAccum",
 ]
