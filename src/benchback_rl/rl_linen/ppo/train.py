@@ -98,7 +98,6 @@ class PPO:
         )
 
     def _time(self, block_until_ready_object: Any|None = None) -> float:
-    def _time(self, block_until_ready_object: Any|None = None) -> float:
         """Get current time, optionally syncing JAX first for accurate timing."""
         if self.config.sync_for_timing and block_until_ready_object is not None:
             jax.block_until_ready(block_until_ready_object)
