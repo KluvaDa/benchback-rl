@@ -7,7 +7,6 @@ Usage:
 import sys
 from pathlib import Path
 
-import yaml
 from dotenv import load_dotenv
 
 from benchback_rl.rl_common.config import PPOConfig
@@ -20,22 +19,11 @@ def main() -> None:
         print("Usage: python -m benchback_rl <config.yaml>", file=sys.stderr)
         sys.exit(1)
     
-    config_path = Path(sys.argv[1])
-    if not config_path.exists():
-        print(f"Config file not found: {config_path}", file=sys.stderr)
-        sys.exit(1)
-    
     # Load environment variables from .env file at project root
-    env_path = Path(__file__).resolve().parents[2] / ".env"
-    load_dotenv(env_path, override=False)
+    project_root = Path(__file__).resolve().parent.parent.parent
+    load_dotenv(project_root/".env", override=False)
     
-    # Load YAML config
-    with open(config_path) as f:
-        config_dict = yaml.safe_load(f)
-    
-    # Create PPOConfig with YAML values overriding defaults
-    config = PPOConfig(**config_dict)
-    
+    config = PPOConfig.from_yaml(sys.argv[1])
     run_ppo_benchmark(config)
 
 
