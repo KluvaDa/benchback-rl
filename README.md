@@ -5,8 +5,32 @@
 
 ### Environment Variables
 
-Set up `.env` with you WandB credentials based on `.env.example` with the following env variables:
+This project uses two separate `.env` files:
 
+#### 1. Docker User IDs (`setup/docker/.env`)
+
+Run the setup script to create `setup/docker/.env` with your user/group IDs (required for proper file permissions in containers):
+
+```bash
+./setup/scripts/create-env.sh
+```
+
+This creates:
+```
+UID=1000
+GID=1000
+DOCKER_GID=999
+```
+
+#### 2. WandB Credentials (`.env`)
+
+Copy the example file and add your WandB credentials:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env`:
 ```
 WANDB_API_KEY=your_api_key_here
 WANDB_ENTITY=your_username_or_team
@@ -21,9 +45,9 @@ python -m benchback_rl.benchmarks.runner
 ## Repository Structure
 
 ### Packages and Installation
-`docker/Dockerfile.run` with `docker/docker-compose.run.yml` is used to run benchmarks in a reproducible way using `requirements.txt`.
+`setup/docker/Dockerfile.run` with `setup/docker/docker-compose.run.yml` is used to run benchmarks in a reproducible way using `requirements.txt`.
 
-`docker/Dockerfile.dev` with `docker/docker-compose.dev.yml` and `.devcontainer/devcontainer.json` is used for development, installing dependencies from `pyproject.toml`. `scipts/export_requirements.sh` is used to generate `requirements.txt` from within the development container.
+`setup/docker/Dockerfile.dev` with `setup/docker/docker-compose.dev.yml` and `.devcontainer/devcontainer.json` is used for development, installing dependencies from `pyproject.toml`. `setup/scripts/export_requirements.sh` is used to generate `requirements.txt` from within the development container.
 
 This repo installs jax from the docker nvcr.io/nvidia/jax:25.10-py3 container for GPU support. It also installs torch with its bundled CUDA dependencies. This way each package is using its own CUDA libraries for best performance and compatibility at the cost of a larger container image.
 

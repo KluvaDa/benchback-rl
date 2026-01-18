@@ -11,7 +11,7 @@ import yaml
 from dotenv import load_dotenv
 
 from benchback_rl.rl_common.config import PPOConfig
-from benchback_rl.benchmarks.runner import run_ppo_benchmark
+from benchback_rl.rl_common.benchmark import run_ppo_benchmark
 
 
 def main() -> None:

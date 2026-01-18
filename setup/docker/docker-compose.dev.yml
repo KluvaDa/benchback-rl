@@ -1,8 +1,8 @@
 services:
   dev:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile.dev
+      context: ../..
+      dockerfile: setup/docker/Dockerfile.dev
     runtime: nvidia
     user: "${UID:-1000}:${GID:-1000}"
     group_add:
@@ -15,7 +15,7 @@ services:
       stack: 67108864
     volumes:
       # Bind mount the entire workspace
-      - ..:/workspace
+      - ../..:/workspace
       # Mount Docker socket for Docker-in-Docker access
       - /var/run/docker.sock:/var/run/docker.sock
     # Keep container running

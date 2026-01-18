@@ -1,9 +1,10 @@
 #!/bin/bash
-# Export production requirements from the current dev environment
+# Run this from within your dev environment to export a requirements.txt for production use.
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+SETUP_DIR="$(dirname "$SCRIPT_DIR")"
+ROOT_DIR="$(dirname "$SETUP_DIR")"
 OUTPUT_FILE="$ROOT_DIR/requirements.txt"
 
 echo "Exporting installed packages..."

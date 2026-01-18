@@ -17,6 +17,7 @@ htmlcov/
 
 # Environment
 .env
+setup/docker/.env
 .venv/
 venv/
 

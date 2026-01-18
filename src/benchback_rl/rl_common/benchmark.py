@@ -1,14 +1,13 @@
 """Benchmark runner for PPO training."""
 
+import time
 from typing import Any, cast
 
 import gymnax
 from gymnax.environments.spaces import Discrete
-import torch
 import wandb
 
 from benchback_rl.rl_common.config import PPOConfig
-from benchback_rl.rl_linen.ppo.rollout import EnvParamsVmapped
 
 # Type alias for gymnax environment (to work around complex union types)
 Env = Any
@@ -17,7 +16,6 @@ Env = Any
 def run_ppo_benchmark(
     config: PPOConfig) -> None:
     """Run a PPO training benchmark."""
-    import time
     start_time = time.perf_counter()  # Capture at very beginning for initial overhead
     
     if config.use_wandb:
@@ -27,6 +25,7 @@ def run_ppo_benchmark(
         )
 
     if config.framework == "torch":
+        import torch
         from benchback_rl import rl_torch
         env = rl_torch.TorchEnv(config.env_name, config.num_envs)
 
@@ -44,6 +43,7 @@ def run_ppo_benchmark(
     elif config.framework == "linen":
         from benchback_rl import rl_linen
         from benchback_rl.rl_linen.models import ModelParams
+        from benchback_rl.rl_linen.ppo.rollout import EnvParamsVmapped
         # Create gymnax environment directly for JAX/Flax
         env_: Env
         env_params: EnvParamsVmapped
