@@ -50,6 +50,8 @@ class PPOConfig:
     seed: int | None = None
     sync_for_timing: bool = False
 
+    notes: str = ""  # any additional notes to log
+
     @property
     def batch_size(self) -> int:
         """Total batch size per iteration (num_envs * num_steps)."""

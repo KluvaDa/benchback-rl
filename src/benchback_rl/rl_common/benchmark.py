@@ -47,7 +47,9 @@ def run_all_benchmarks() -> None:
             compile=compile,
             env_name="Acrobot-v1",
             hidden_sizes=models_hidden_sizes_lookup["small"],
+            sync_for_timing=False,
             use_wandb=False,
+            notes="warmup"
         )
         run_ppo_benchmark(config_template("torch", "torch.compile"))
         run_ppo_benchmark(config_template("linen", "jax.jit"))
@@ -61,13 +63,15 @@ def run_all_benchmarks() -> None:
                 compile=compile,
                 env_name=env_name,
                 hidden_sizes=models_hidden_sizes_lookup["small"],
+                sync_for_timing=False,
                 use_wandb=True,
+                notes="experiment 1: various envs"
             )
             run_ppo_benchmark(config_template("torch", "torch.compile"))
             run_ppo_benchmark(config_template("linen", "jax.jit"))
             run_ppo_benchmark(config_template("nnx", "nnx.cached_partial"))
     
-    # experiment 2: various model sizes on Acrobot-v1 and various compilation methods
+    # experiment 2: various model sizes on Acrobot-v1
     for _ in range(4):
         for model_size in ["small", "medium", "large"]:
             config_template = lambda framework, compile: PPOConfig(
@@ -75,7 +79,25 @@ def run_all_benchmarks() -> None:
                 compile=compile,
                 env_name="Acrobot-v1",
                 hidden_sizes=models_hidden_sizes_lookup[model_size],
+                sync_for_timing=False,
                 use_wandb=True,
+                notes="experiment 2: various model sizes"
+            )
+            run_ppo_benchmark(config_template("torch", "torch.compile"))
+            run_ppo_benchmark(config_template("linen", "jax.jit"))
+            run_ppo_benchmark(config_template("nnx", "nnx.cached_partial"))
+    
+    # experiment 3: various compilation settings on Acrobot-v1 and synced timing
+    for _ in range(4):
+        for model_size in ["small", "medium", "large"]:
+            config_template = lambda framework, compile: PPOConfig(
+                framework=framework,
+                compile=compile,
+                env_name="Acrobot-v1",
+                hidden_sizes=models_hidden_sizes_lookup[model_size],
+                sync_for_timing=True,
+                use_wandb=True,
+                notes="experiment 3: various compilation settings with synced timing"
             )
             run_ppo_benchmark(config_template("torch", "torch.compile"))
             run_ppo_benchmark(config_template("linen", "jax.jit"))
