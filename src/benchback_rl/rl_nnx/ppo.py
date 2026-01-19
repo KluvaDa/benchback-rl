@@ -459,15 +459,15 @@ class PPO(nnx.Module):
         # Use start_time passed from runner for initial overhead, or fallback to now
         time_start = self.start_time if self.start_time is not None else self._time()
 
-        # Duration tracking: first iteration, first 8 (0:7), and rest (7:)
+        # Duration tracking: first iteration, first 7 (1:7), and rest (7:)
         duration_iteration_0 = 0.0
-        duration_iteration_sum_0_7 = 0.0
+        duration_iteration_sum_1_7 = 0.0
         duration_iteration_sum_7_plus = 0.0
         duration_rollout_0 = 0.0
-        duration_rollout_sum_0_7 = 0.0
+        duration_rollout_sum_1_7 = 0.0
         duration_rollout_sum_7_plus = 0.0
         duration_update_0 = 0.0
-        duration_update_sum_0_7 = 0.0
+        duration_update_sum_1_7 = 0.0
         duration_update_sum_7_plus = 0.0
 
         self.reset()
@@ -490,16 +490,16 @@ class PPO(nnx.Module):
             duration_rollout = metrics["duration_rollout"]
             duration_update = metrics["duration_update"]
 
-            # Accumulate durations: first (0), first 8 (0:7), rest (7:)
+            # Accumulate durations: first (0), first 7 (1:7), rest (7:)
             if iteration == 0:
                 duration_iteration_0 = time_iteration_end - time_start  # From start_time
                 duration_rollout_0 = duration_rollout
                 duration_update_0 = duration_update
-            if iteration < 8:
-                duration_iteration_sum_0_7 += duration_iteration
-                duration_rollout_sum_0_7 += duration_rollout
-                duration_update_sum_0_7 += duration_update
-            else:
+            if iteration >= 1 and iteration < 8:
+                duration_iteration_sum_1_7 += duration_iteration
+                duration_rollout_sum_1_7 += duration_rollout
+                duration_update_sum_1_7 += duration_update
+            elif iteration >= 8:
                 duration_iteration_sum_7_plus += duration_iteration
                 duration_rollout_sum_7_plus += duration_rollout
                 duration_update_sum_7_plus += duration_update
@@ -528,32 +528,32 @@ class PPO(nnx.Module):
         # Final timings
         time_end = self._time()
         duration_total = time_end - time_start
-        num_0_7 = min(8, self.config.num_iterations)
+        num_1_7 = min(7, max(0, self.config.num_iterations - 1))
         num_7_plus = max(1, self.config.num_iterations - 8)
-        duration_iteration_avg_0_7 = duration_iteration_sum_0_7 / num_0_7
+        duration_iteration_avg_1_7 = duration_iteration_sum_1_7 / num_1_7 if num_1_7 > 0 else 0.0
         duration_iteration_avg_7_plus = duration_iteration_sum_7_plus / num_7_plus if self.config.num_iterations > 8 else 0.0
-        duration_rollout_avg_0_7 = duration_rollout_sum_0_7 / num_0_7
+        duration_rollout_avg_1_7 = duration_rollout_sum_1_7 / num_1_7 if num_1_7 > 0 else 0.0
         duration_rollout_avg_7_plus = duration_rollout_sum_7_plus / num_7_plus if self.config.num_iterations > 8 else 0.0
-        duration_update_avg_0_7 = duration_update_sum_0_7 / num_0_7
+        duration_update_avg_1_7 = duration_update_sum_1_7 / num_1_7 if num_1_7 > 0 else 0.0
         duration_update_avg_7_plus = duration_update_sum_7_plus / num_7_plus if self.config.num_iterations > 8 else 0.0
 
         self._log_summary({
             "duration_total": duration_total,
             "duration_iteration_0": duration_iteration_0,
-            "duration_iteration_avg_0:7": duration_iteration_avg_0_7,
+            "duration_iteration_avg_1:7": duration_iteration_avg_1_7,
             "duration_iteration_avg_7:": duration_iteration_avg_7_plus,
             "duration_rollout_0": duration_rollout_0,
-            "duration_rollout_avg_0:7": duration_rollout_avg_0_7,
+            "duration_rollout_avg_1:7": duration_rollout_avg_1_7,
             "duration_rollout_avg_7:": duration_rollout_avg_7_plus,
             "duration_update_0": duration_update_0,
-            "duration_update_avg_0:7": duration_update_avg_0_7,
+            "duration_update_avg_1:7": duration_update_avg_1_7,
             "duration_update_avg_7:": duration_update_avg_7_plus,
         })
 
         # Final summary
         print(f"\nTraining completed in {duration_total/60:.1f} minutes")
         print(f"Iteration 0: {duration_iteration_0:.3f}s (from start_time)")
-        print(f"Iteration avg 0:7: {duration_iteration_avg_0_7:.3f}s, avg 7+: {duration_iteration_avg_7_plus:.3f}s")
-        print(f"Rollout 0: {duration_rollout_0:.4f}s, avg 0:7: {duration_rollout_avg_0_7:.4f}s, avg 7+: {duration_rollout_avg_7_plus:.4f}s")
-        print(f"Update 0: {duration_update_0:.4f}s, avg 0:7: {duration_update_avg_0_7:.4f}s, avg 7+: {duration_update_avg_7_plus:.4f}s")
+        print(f"Iteration avg 1:7: {duration_iteration_avg_1_7:.3f}s, avg 7+: {duration_iteration_avg_7_plus:.3f}s")
+        print(f"Rollout 0: {duration_rollout_0:.4f}s, avg 1:7: {duration_rollout_avg_1_7:.4f}s, avg 7+: {duration_rollout_avg_7_plus:.4f}s")
+        print(f"Update 0: {duration_update_0:.4f}s, avg 1:7: {duration_update_avg_1_7:.4f}s, avg 7+: {duration_update_avg_7_plus:.4f}s")
         print(f"Final average reward: {reward_str}")

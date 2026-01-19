@@ -40,7 +40,7 @@ def run_all_benchmarks() -> None:
     }
 
     # warmup
-    for _ in range(2):
+    for _ in range(1):
         config_template = lambda framework, compile: PPOConfig(
             framework=framework,
             compile=compile,
