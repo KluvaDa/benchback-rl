@@ -21,6 +21,8 @@ def create_config(model: Literal["CartPole-v1", "Acrobot-v1!", "MountainCar-v0"]
 
 def run_all_benchmarks() -> None:
     """Run all predefined PPO benchmarks."""
+    # Note: Only 1D observation envs are supported (no images)
+    # Excluded: DeepSea-bsuite (8,8), Catch-bsuite (10,5), SimpleBandit-bsuite (1,1)
     environments = (
         "CartPole-v1",
         "Acrobot-v1",
@@ -28,9 +30,6 @@ def run_all_benchmarks() -> None:
         "DiscountingChain-bsuite",
         "MemoryChain-bsuite",
         "UmbrellaChain-bsuite",
-        "DeepSea-bsuite",
-        "Catch-bsuite",
-        "SimpleBandit-bsuite",
         "BernoulliBandit-misc",
         "GaussianBandit-misc"
     )
@@ -73,7 +72,7 @@ def run_all_benchmarks() -> None:
     
     # experiment 2: various model sizes on Acrobot-v1
     for _ in range(4):
-        for model_size in ["small", "medium", "large"]:
+        for model_size in ["large", "medium", "small"]:
             config_template = lambda framework, compile: PPOConfig(
                 framework=framework,
                 compile=compile,
