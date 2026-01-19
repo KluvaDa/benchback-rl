@@ -244,17 +244,19 @@ class PPO:
         # Use start_time passed from runner for initial overhead, or fallback to now
         time_start = self.start_time if self.start_time is not None else self._time()
 
-        duration_first_iteration = 0.0
-        duration_second_plus_sum = 0.0
-        duration_rollout_sum = 0.0
-        duration_update_sum = 0.0
+        # Duration tracking: first iteration, first 8 (0:7), and rest (7:)
+        duration_iteration_0 = 0.0
+        duration_iteration_sum_0_7 = 0.0
+        duration_iteration_sum_7_plus = 0.0
+        duration_rollout_0 = 0.0
+        duration_rollout_sum_0_7 = 0.0
+        duration_rollout_sum_7_plus = 0.0
+        duration_update_0 = 0.0
+        duration_update_sum_0_7 = 0.0
+        duration_update_sum_7_plus = 0.0
 
         self.reset()
         self._log_hparams()
-
-        # Calculate initial overhead (time from start to first iteration)
-        time_first_iteration_start = self._time()
-        duration_initial_overhead = time_first_iteration_start - time_start
 
         # Progress bar with key metrics
         pbar = tqdm(range(self.config.num_iterations), desc="Training")
@@ -267,15 +269,22 @@ class PPO:
             # Timing
             time_iteration_end = self._time(metrics)
             duration_iteration = time_iteration_end - time_iteration_start
+            duration_rollout = metrics["duration_rollout"]
+            duration_update = metrics["duration_update"]
 
+            # Accumulate durations: first (0), first 8 (0:7), rest (7:)
             if iteration == 0:
-                duration_first_iteration = duration_iteration
+                duration_iteration_0 = time_iteration_end - time_start  # From start_time
+                duration_rollout_0 = duration_rollout
+                duration_update_0 = duration_update
+            if iteration < 8:
+                duration_iteration_sum_0_7 += duration_iteration
+                duration_rollout_sum_0_7 += duration_rollout
+                duration_update_sum_0_7 += duration_update
             else:
-                duration_second_plus_sum += duration_iteration
-
-            # Accumulate component timings
-            duration_rollout_sum += metrics["duration_rollout"]
-            duration_update_sum += metrics["duration_update"]
+                duration_iteration_sum_7_plus += duration_iteration
+                duration_rollout_sum_7_plus += duration_rollout
+                duration_update_sum_7_plus += duration_update
 
             metrics["duration_iteration"] = duration_iteration
             metrics["time_elapsed"] = time_iteration_end - time_start
@@ -301,24 +310,32 @@ class PPO:
         # Final timings
         time_end = self._time()
         duration_total = time_end - time_start
-        num_second_plus = max(1, self.config.num_iterations - 1)
-        duration_avg_second_plus = duration_second_plus_sum / num_second_plus
-        duration_avg_rollout = duration_rollout_sum / self.config.num_iterations
-        duration_avg_update = duration_update_sum / self.config.num_iterations
+        num_0_7 = min(8, self.config.num_iterations)
+        num_7_plus = max(1, self.config.num_iterations - 8)
+        duration_iteration_avg_0_7 = duration_iteration_sum_0_7 / num_0_7
+        duration_iteration_avg_7_plus = duration_iteration_sum_7_plus / num_7_plus if self.config.num_iterations > 8 else 0.0
+        duration_rollout_avg_0_7 = duration_rollout_sum_0_7 / num_0_7
+        duration_rollout_avg_7_plus = duration_rollout_sum_7_plus / num_7_plus if self.config.num_iterations > 8 else 0.0
+        duration_update_avg_0_7 = duration_update_sum_0_7 / num_0_7
+        duration_update_avg_7_plus = duration_update_sum_7_plus / num_7_plus if self.config.num_iterations > 8 else 0.0
 
         self._log_summary({
             "duration_total": duration_total,
-            "duration_initial_overhead": duration_initial_overhead,
-            "duration_first_iteration": duration_first_iteration,
-            "duration_avg_second_plus_iteration": duration_avg_second_plus,
-            "duration_avg_rollout": duration_avg_rollout,
-            "duration_avg_update": duration_avg_update,
+            "duration_iteration_0": duration_iteration_0,
+            "duration_iteration_avg_0:7": duration_iteration_avg_0_7,
+            "duration_iteration_avg_7:": duration_iteration_avg_7_plus,
+            "duration_rollout_0": duration_rollout_0,
+            "duration_rollout_avg_0:7": duration_rollout_avg_0_7,
+            "duration_rollout_avg_7:": duration_rollout_avg_7_plus,
+            "duration_update_0": duration_update_0,
+            "duration_update_avg_0:7": duration_update_avg_0_7,
+            "duration_update_avg_7:": duration_update_avg_7_plus,
         })
 
         # Final summary
         print(f"\nTraining completed in {duration_total/60:.1f} minutes")
-        print(f"Initial overhead: {duration_initial_overhead:.3f}s")
-        print(f"First iteration: {duration_first_iteration:.3f}s")
-        print(f"Average iteration (2nd+): {duration_avg_second_plus:.3f}s")
-        print(f"  Avg rollout: {duration_avg_rollout:.4f}s, Avg update: {duration_avg_update:.4f}s")
+        print(f"Iteration 0: {duration_iteration_0:.3f}s (from start_time)")
+        print(f"Iteration avg 0:7: {duration_iteration_avg_0_7:.3f}s, avg 7+: {duration_iteration_avg_7_plus:.3f}s")
+        print(f"Rollout 0: {duration_rollout_0:.4f}s, avg 0:7: {duration_rollout_avg_0_7:.4f}s, avg 7+: {duration_rollout_avg_7_plus:.4f}s")
+        print(f"Update 0: {duration_update_0:.4f}s, avg 0:7: {duration_update_avg_0_7:.4f}s, avg 7+: {duration_update_avg_7_plus:.4f}s")
         print(f"Final average reward: {reward_str}")
