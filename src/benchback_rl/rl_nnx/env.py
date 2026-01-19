@@ -19,6 +19,9 @@ EnvParams = Any
 class EnvState(nnx.Variable):
     pass
 
+class EnvStaticVariable(nnx.Variable):
+    """This is only a temporary workaround until flax.nnx.static is available in version 0.12 onwards."""
+    pass
 
 class NnxVecEnv(nnx.Module):
     """Stateful vectorized environment wrapper.
@@ -54,28 +57,30 @@ class NnxVecEnv(nnx.Module):
         # Declaring stateful variables
         self.state: EnvState
         self.rngs: nnx.Rngs = rngs
+        self.env_params: EnvStaticVariable 
+
 
         # Declaring static variables
         self.env_name: str = env_name
         self.num_envs: int = num_envs
         self.env: Any
-        self.env_params: Any
         self.num_actions: int
         self.obs_dim: int
         self.reset_fn: Callable
         self.step_fn: Callable
 
         # Gymnax environment
-        self.env, self.env_params = gymnax.make(env_name)
+        self.env, env_params = gymnax.make(env_name)
+        self.env_params = EnvStaticVariable(env_params)  # Temporary workaround for static variable
 
         # Validate and extract action space info
-        action_space = self.env.action_space(self.env_params)
+        action_space = self.env.action_space(self.env_params.value)
         if not isinstance(action_space, spaces.Discrete):
             raise ValueError(f"Only Discrete action spaces supported, got {type(action_space).__name__}")
         self.num_actions = action_space.n
 
         # Validate and extract observation space info
-        obs_space = self.env.observation_space(self.env_params)
+        obs_space = self.env.observation_space(self.env_params.value)
         if not isinstance(obs_space, spaces.Box):
             raise ValueError(f"Only Box observation spaces supported, got {type(obs_space).__name__}")
         if len(obs_space.shape) != 1:
@@ -98,7 +103,7 @@ class NnxVecEnv(nnx.Module):
             Initial observations, shape (num_envs, obs_dim).
         """
         reset_keys = jax.random.split(self.rngs.env(), self.num_envs)
-        obs, self.state.value = self.reset_fn(reset_keys, self.env_params)
+        obs, self.state.value = self.reset_fn(reset_keys, self.env_params.value)
         
         return obs
     
@@ -118,7 +123,7 @@ class NnxVecEnv(nnx.Module):
         step_keys = jax.random.split(self.rngs.env(), self.num_envs)
         
         next_obs, next_state, rewards, dones, info = self.step_fn(
-            step_keys, self.state.value, actions, self.env_params
+            step_keys, self.state.value, actions, self.env_params.value
         )
         self.state.value = next_state
         
