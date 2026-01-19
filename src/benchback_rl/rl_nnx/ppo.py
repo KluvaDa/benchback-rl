@@ -39,7 +39,6 @@ class PPO(nnx.Module):
         env: NnxVecEnv,
         model: ActorCritic,
         rngs: nnx.Rngs,
-        jit_mode: str = "nnx.jit",
         start_time: float | None = None,
     ) -> None:
         """
@@ -48,7 +47,6 @@ class PPO(nnx.Module):
             env: NnxVecEnv instance.
             model: ActorCritic model instance.
             rngs: nnx.Rngs object used with rngs.minibatch()
-            jit_mode: JIT compilation mode: "nnx.jit" or "cached_partial".
             start_time: Time at beginning of main for initial overhead calculation.
         """
         if config.framework != "nnx":
@@ -121,20 +119,24 @@ class PPO(nnx.Module):
         self._flat_values = PPOVariable(jnp.empty((config.batch_size,)))
         self._shuffled_indices = PPOVariable(jnp.empty((config.batch_size,), dtype=jnp.int32))
 
-        # JIT compilation
-        if jit_mode == "nnx.jit":
+        # JIT compilation based on config.compile
+        if config.compile == "none":
+            self._collect_rollout = lambda: PPO._collect_rollout_impl(self)
+            self._compute_gae = lambda: PPO._compute_gae_impl(self)
+            self._update = lambda: PPO._update_impl(self)
+        elif config.compile == "nnx.jit":
             _collect_rollout_jit = nnx.jit(PPO._collect_rollout_impl)
             _compute_gae_jit = nnx.jit(PPO._compute_gae_impl)
             _update_jit = nnx.jit(PPO._update_impl)
             self._collect_rollout = lambda: _collect_rollout_jit(self)
             self._compute_gae = lambda: _compute_gae_jit(self)
             self._update = lambda: _update_jit(self)
-        elif jit_mode == "cached_partial":
+        elif config.compile == "nnx.cached_partial":
             self._collect_rollout = nnx.cached_partial(nnx.jit(PPO._collect_rollout_impl), self)
             self._compute_gae = nnx.cached_partial(nnx.jit(PPO._compute_gae_impl), self)
             self._update = nnx.cached_partial(nnx.jit(PPO._update_impl), self)
         else:
-            raise ValueError(f"Unsupported jit_mode: {jit_mode}")
+            raise ValueError(f"Unsupported compile mode for nnx: {config.compile}")
         
     def _time(self, block_until_ready_object: Any|None = None) -> float:
         """Get current time, optionally syncing JAX first for accurate timing."""
@@ -445,8 +447,8 @@ class PPO(nnx.Module):
         # Carry over final observation for next rollout
         self._obs.value = self._obs.value.at[0].set(self._obs.value[self.config.num_steps])
 
-        # Combine all metrics
-        metrics = {**rollout_metrics, **update_metrics}
+        # Combine all metrics (convert JAX arrays to floats)
+        metrics = {k: float(v) for k, v in {**rollout_metrics, **update_metrics}.items()}
         metrics["duration_rollout"] = time_update_start - time_rollout_start
         metrics["duration_update"] = time_update_end - time_update_start
 
@@ -536,5 +538,5 @@ class PPO(nnx.Module):
         print(f"Initial overhead: {duration_initial_overhead:.3f}s")
         print(f"First iteration: {duration_first_iteration:.3f}s")
         print(f"Average iteration (2nd+): {duration_avg_second_plus:.3f}s")
-        print(f"  Avg rollout: {duration_avg_rollout:.4f}s, Avg update: {duration_avg_update:.4f}s")
+        print(f"Avg rollout: {duration_avg_rollout:.4f}s, Avg update: {duration_avg_update:.4f}s")
         print(f"Final average reward: {reward_str}")

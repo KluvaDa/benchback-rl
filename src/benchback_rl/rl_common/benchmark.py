@@ -1,7 +1,7 @@
 """Benchmark runner for PPO training."""
 
 import time
-from typing import Any, cast
+from typing import Any, cast, Literal
 
 import gymnax
 from gymnax.environments.spaces import Discrete
@@ -11,6 +11,80 @@ from benchback_rl.rl_common.config import PPOConfig
 
 # Type alias for gymnax environment (to work around complex union types)
 Env = Any
+
+
+def create_config(model: Literal["CartPole-v1", "Acrobot-v1!", "MountainCar-v0"]):
+    """ Creates the PPOConfig for the specific benchmark experiments that we will run.
+    Relies on the defaults from PPOConfig for the unspecified parameters.
+    """
+
+
+def run_all_benchmarks() -> None:
+    """Run all predefined PPO benchmarks."""
+    environments = (
+        "CartPole-v1",
+        "Acrobot-v1",
+        "MountainCar-v0",
+        "DiscountingChain-bsuite",
+        "MemoryChain-bsuite",
+        "UmbrellaChain-bsuite",
+        "DeepSea-bsuite",
+        "Catch-bsuite",
+        "SimpleBandit-bsuite",
+        "BernoulliBandit-misc",
+        "GaussianBandit-misc"
+    )
+    models_hidden_sizes_lookup = {
+        "small": (64, 64),
+        "medium": (256, 256, 256),
+        "large": (1024, 1024, 1024, 1024, 1024, 1024),
+    }
+
+    # warmup
+    for _ in range(2):
+        config_template = lambda framework, compile: PPOConfig(
+            framework=framework,
+            compile=compile,
+            env_name="Acrobot-v1",
+            hidden_sizes=models_hidden_sizes_lookup["small"],
+            use_wandb=False,
+        )
+        run_ppo_benchmark(config_template("torch", "torch.compile"))
+        run_ppo_benchmark(config_template("linen", "jax.jit"))
+        run_ppo_benchmark(config_template("nnx", "nnx.cached_partial"))
+
+    # experiment 1: various envs
+    for _ in range(2):
+        for env_name in environments:
+            config_template = lambda framework, compile: PPOConfig(
+                framework=framework,
+                compile=compile,
+                env_name=env_name,
+                hidden_sizes=models_hidden_sizes_lookup["small"],
+                use_wandb=True,
+            )
+            run_ppo_benchmark(config_template("torch", "torch.compile"))
+            run_ppo_benchmark(config_template("linen", "jax.jit"))
+            run_ppo_benchmark(config_template("nnx", "nnx.cached_partial"))
+    
+    # experiment 2: various model sizes on Acrobot-v1 and various compilation methods
+    for _ in range(4):
+        for model_size in ["small", "medium", "large"]:
+            config_template = lambda framework, compile: PPOConfig(
+                framework=framework,
+                compile=compile,
+                env_name="Acrobot-v1",
+                hidden_sizes=models_hidden_sizes_lookup[model_size],
+                use_wandb=True,
+            )
+            run_ppo_benchmark(config_template("torch", "torch.compile"))
+            run_ppo_benchmark(config_template("linen", "jax.jit"))
+            run_ppo_benchmark(config_template("nnx", "nnx.cached_partial"))
+            run_ppo_benchmark(config_template("torch", "none"))
+            run_ppo_benchmark(config_template("linen", "none"))
+            run_ppo_benchmark(config_template("nnx", "none"))
+            run_ppo_benchmark(config_template("torch", "torch.compile"))
+            run_ppo_benchmark(config_template("torch", "nnx.jit"))
 
 
 def run_ppo_benchmark(
@@ -32,7 +106,7 @@ def run_ppo_benchmark(
         agent: rl_torch.ActorCritic = rl_torch.DefaultActorCritic(
             obs_dim=env.obs_dim,
             action_dim=env.num_actions,
-            hidden_dim=config.hidden_dim,
+            hidden_sizes=config.hidden_sizes,
         )
         # torch.compile provides ~2x speedup for the model forward pass
         agent = torch.compile(agent)  # type: ignore[assignment]
@@ -56,7 +130,7 @@ def run_ppo_benchmark(
         # Create model and initialize parameters
         model = rl_linen.DefaultActorCritic(
             action_dim=action_dim,
-            hidden_dim=config.hidden_dim,
+            hidden_sizes=config.hidden_sizes,
         )
         
         # Initialize model parameters with dummy input
@@ -99,7 +173,6 @@ def run_ppo_benchmark(
         env = rl_nnx.NnxVecEnv(
             env_name=config.env_name,
             num_envs=config.num_envs,
-            jit=True,
             rngs=rngs,
         )
         
@@ -107,7 +180,7 @@ def run_ppo_benchmark(
         model = rl_nnx.DefaultActorCritic(
             obs_dim=env.obs_dim,
             action_dim=env.num_actions,
-            hidden_dim=config.hidden_dim,
+            hidden_sizes=config.hidden_sizes,
             rngs=rngs,
         )
         
@@ -117,7 +190,6 @@ def run_ppo_benchmark(
             env=env,
             model=model,
             rngs=rngs,
-            jit_mode="nnx.jit",
             start_time=start_time,
         )
         

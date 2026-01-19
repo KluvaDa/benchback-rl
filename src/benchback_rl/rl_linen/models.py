@@ -126,17 +126,17 @@ class ActorCritic(nn.Module):
         return action, log_prob, entropy, value
 
 
-def DefaultActorCritic(action_dim: int, hidden_dim: int = 64) -> ActorCritic:
+def DefaultActorCritic(action_dim: int, hidden_sizes: tuple[int, ...] = (64, 64)) -> ActorCritic:
     """Factory function for ActorCritic with default MLP networks.
 
     Args:
         action_dim: Number of discrete actions.
-        hidden_dim: Hidden layer dimension (default: 64).
+        hidden_sizes: List of hidden layer dimensions (default: [64, 64]).
 
     Returns:
         ActorCritic instance with default MLP actor and critic networks.
     """
     return ActorCritic(
-        actor_factory=partial(MLP, features=[hidden_dim, hidden_dim, action_dim], final_std=0.01),
-        critic_factory=partial(MLP, features=[hidden_dim, hidden_dim, 1], final_std=1.0),
+        actor_factory=partial(MLP, features=(*hidden_sizes, action_dim), final_std=0.01),
+        critic_factory=partial(MLP, features=(*hidden_sizes, 1), final_std=1.0),
     )

@@ -1,4 +1,5 @@
 framework: torch
+compile: torch.compile
 env_name: Acrobot-v1
 num_envs: 32
 num_steps: 256

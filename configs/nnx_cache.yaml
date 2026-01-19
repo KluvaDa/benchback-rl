@@ -1,5 +1,5 @@
 framework: nnx
-nnx_jit_mode: cached_partial
+compile: nnx.cached_partial
 env_name: Acrobot-v1
 num_envs: 32
 num_steps: 256

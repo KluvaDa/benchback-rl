@@ -39,7 +39,6 @@ class NnxVecEnv(nnx.Module):
         self,
         env_name: str,
         num_envs: int,
-        jit: bool,
         rngs: nnx.Rngs,
     ) -> None:
 
@@ -59,7 +58,6 @@ class NnxVecEnv(nnx.Module):
         # Declaring static variables
         self.env_name: str = env_name
         self.num_envs: int = num_envs
-        self.jit: bool = jit
         self.env: Any
         self.env_params: Any
         self.num_actions: int
@@ -89,13 +87,9 @@ class NnxVecEnv(nnx.Module):
 
         # vmap over: keys (num_envs,), state (num_envs, ...), action (num_envs, ...)
         # params are shared (not vmapped)
+        # Note: not JIT compiled here - compiled from above in the rollout
         self.reset_fn = jax.vmap(self.env.reset, in_axes=(0, None))
         self.step_fn = jax.vmap(self.env.step, in_axes=(0, 0, 0, None))
-        
-        # JIT compile if specified
-        if jit:
-            self.reset_fn = jax.jit(self.reset_fn)
-            self.step_fn = jax.jit(self.step_fn)
     
     def reset(self) -> jax.Array:
         """Reset all environments.

@@ -56,7 +56,7 @@ class PPO:
         if config.framework != "linen":
             raise ValueError(f"Expected framework='linen', got '{config.framework}'")
 
-        # Create vmapped environment functions
+        # Create vmapped environment functions (not JIT compiled here - compiled from above in the rollout)
         self._env_reset = jax.vmap(env.reset, in_axes=(0, None))
         self._env_step = jax.vmap(env.step, in_axes=(0, 0, 0, None))
 
@@ -90,19 +90,25 @@ class PPO:
         # Environment carry state (initialized by reset())
         self._env_carry: EnvCarry
 
-        # JIT compile core functions with static arguments
-        self._collect_rollout_jit = jax.jit(
-            collect_rollout,
-            static_argnames=("config", "env_step_fn", "model"),
-        )
-        self._compute_gae_jit = jax.jit(
-            compute_gae,
-            static_argnames=("gamma", "gae_lambda"),
-        )
-        self._update_jit = jax.jit(
-            update,
-            static_argnames=("config", "model", "optimizer"),
-        )
+        # JIT compile core functions based on config.compile
+        if config.compile == "jax.jit":
+            self._collect_rollout_fn = jax.jit(
+                collect_rollout,
+                static_argnames=("config", "env_step_fn", "model"),
+            )
+            self._compute_gae_fn = jax.jit(
+                compute_gae,
+                static_argnames=("gamma", "gae_lambda"),
+            )
+            self._update_fn = jax.jit(
+                update,
+                static_argnames=("config", "model", "optimizer"),
+            )
+        else:
+            # No JIT (compile == "none")
+            self._collect_rollout_fn = collect_rollout
+            self._compute_gae_fn = compute_gae
+            self._update_fn = update
 
     def _time(self, block_until_ready_object: Any|None = None) -> float:
         """Get current time, optionally syncing JAX first for accurate timing."""
@@ -161,7 +167,7 @@ class PPO:
 
         # Collect rollout (without GAE)
         (obs, actions, log_probs, values, rewards, dones,
-         final_obs, final_value, new_env_carry, episode_metrics) = self._collect_rollout_jit(
+         final_obs, final_value, new_env_carry, episode_metrics) = self._collect_rollout_fn(
             config=self.config,
             env_step_fn=self._env_step,
             env_params=self.env_params,
@@ -172,7 +178,7 @@ class PPO:
         )
 
         # Compute GAE
-        advantages, returns = self._compute_gae_jit(
+        advantages, returns = self._compute_gae_fn(
             values=values,
             rewards=rewards,
             dones=dones,
@@ -201,7 +207,7 @@ class PPO:
         self._rng_key, update_rng_key = jax.random.split(self._rng_key)
 
         # Perform PPO update
-        new_train_state, update_metrics = self._update_jit(
+        new_train_state, update_metrics = self._update_fn(
             config=self.config,
             model=self.model,
             optimizer=self._optimizer,

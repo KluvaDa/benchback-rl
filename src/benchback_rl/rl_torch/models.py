@@ -1,5 +1,7 @@
 """Actor-Critic neural networks for PPO."""
 
+from collections.abc import Sequence
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -10,6 +12,37 @@ def layer_init(layer: nn.Linear, std: float = np.sqrt(2), bias_const: float = 0.
     nn.init.orthogonal_(layer.weight, std)
     nn.init.constant_(layer.bias, bias_const)
     return layer
+
+
+class MLP(nn.Module):
+    """Multi-layer perceptron with orthogonal initialization."""
+
+    def __init__(
+        self,
+        in_dim: int,
+        out_dim: int,
+        hidden_sizes: Sequence[int],
+        output_std: float = np.sqrt(2),
+    ) -> None:
+        """
+        Args:
+            in_dim: Input dimension.
+            out_dim: Output dimension.
+            hidden_sizes: Sequence[int] of hidden layer sizes.
+            output_std: Standard deviation for output layer initialization.
+        """
+        super().__init__()
+        layers = []
+        current_dim = in_dim
+        for hidden_dim in hidden_sizes:
+            layers.append(layer_init(nn.Linear(current_dim, hidden_dim)))
+            layers.append(nn.Tanh())
+            current_dim = hidden_dim
+        layers.append(layer_init(nn.Linear(current_dim, out_dim), std=output_std))
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.net(x)
 
 
 class ActorCritic(nn.Module):
@@ -68,19 +101,7 @@ class ActorCritic(nn.Module):
 class DefaultActorCritic(ActorCritic):
     """ActorCritic with default MLP networks for discrete action spaces."""
 
-    def __init__(self, obs_dim: int, action_dim: int, hidden_dim: int = 64) -> None:
-        actor = nn.Sequential(
-            layer_init(nn.Linear(obs_dim, hidden_dim)),
-            nn.Tanh(),
-            layer_init(nn.Linear(hidden_dim, hidden_dim)),
-            nn.Tanh(),
-            layer_init(nn.Linear(hidden_dim, action_dim), std=0.01),
-        )
-        critic = nn.Sequential(
-            layer_init(nn.Linear(obs_dim, hidden_dim)),
-            nn.Tanh(),
-            layer_init(nn.Linear(hidden_dim, hidden_dim)),
-            nn.Tanh(),
-            layer_init(nn.Linear(hidden_dim, 1), std=1.0),
-        )
+    def __init__(self, obs_dim: int, action_dim: int, hidden_sizes: Sequence[int] = (64, 64)) -> None:
+        actor = MLP(obs_dim, action_dim, hidden_sizes, output_std=0.01)
+        critic = MLP(obs_dim, 1, hidden_sizes, output_std=1.0)
         super().__init__(actor, critic)

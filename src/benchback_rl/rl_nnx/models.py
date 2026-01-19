@@ -159,7 +159,7 @@ class ActorCritic(nnx.Module):
 def DefaultActorCritic(
     obs_dim: int,
     action_dim: int,
-    hidden_dim: int = 64,
+    hidden_sizes: Sequence[int] = (64, 64),
     *,
     rngs: nnx.Rngs,
 ) -> ActorCritic:
@@ -168,7 +168,7 @@ def DefaultActorCritic(
     Args:
         obs_dim: Observation dimension.
         action_dim: Number of discrete actions.
-        hidden_dim: Hidden layer dimension (default: 64).
+        hidden_sizes: List of hidden layer dimensions (default: [64, 64]).
         rngs: NNX random number generators.
 
     Returns:
@@ -176,13 +176,13 @@ def DefaultActorCritic(
     """
     actor = MLP(
         obs_dim,
-        [hidden_dim, hidden_dim, action_dim],
+        (*hidden_sizes, action_dim),
         final_std=0.01,
         rngs=rngs,
     )
     critic = MLP(
         obs_dim,
-        [hidden_dim, hidden_dim, 1],
+        (*hidden_sizes, 1),
         final_std=1.0,
         rngs=rngs,
     )

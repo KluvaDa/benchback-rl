@@ -15,17 +15,20 @@ class PPOConfig:
     env_name: str
     
     # structural parameters
-    num_envs: int  # parallel environments
-    num_steps: int  # in a rollout
-    num_minibatches: int  # number of minibatches per epoch, to split the batch (num_envs*num_steps) into
-    update_epochs: int  # number of epochs per update
-    num_iterations: int  # training iterations, number of train_step calls
+    num_envs: int = 32  # parallel environments
+    num_steps: int = 256  # in a rollout
+    num_minibatches: int = 8  # number of minibatches per epoch, to split the batch (num_envs*num_steps) into
+    update_epochs: int = 10  # number of epochs per update
+    num_iterations: int = 100  # training iterations, number of train_step calls
     
-    # framework specific parameters
-    nnx_jit_mode: str = ""
+    # compilation parameters
+    # torch: none, torch.compile
+    # linen: none, jax.jit
+    # nnx: none, nnx.jit, nnx.cached_partial
+    compile: Literal["none", "torch.compile", "jax.jit", "nnx.jit", "nnx.cached_partial"] = "none"
 
     # network parameters
-    hidden_dim: int = 64 # hidden dimension of actor-critic network
+    hidden_sizes: tuple[int, ...] = (64, 64) # hidden dimensions of actor-critic network
 
     # logging parameters
     use_wandb: bool = False
