@@ -28,4 +28,4 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Or use the provided docker-compose.yml
 
 # Default command
-CMD ["python", "-c", "print('Benchback RL container ready. Add your command here.')"]
+CMD ["python", "-m", "benchback_rl"]
