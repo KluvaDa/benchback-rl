@@ -3,6 +3,8 @@ services:
     build:
       context: ../..
       dockerfile: setup/docker/Dockerfile.run
+    env_file:
+      - ../../.env
     runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
