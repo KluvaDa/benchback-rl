@@ -260,6 +260,7 @@ class PPO:
 
         # Progress bar with key metrics
         pbar = tqdm(range(self.config.num_iterations), desc="Training")
+        reward_str = "N/A"
         for iteration in pbar:
             time_iteration_start = self._time()
 
