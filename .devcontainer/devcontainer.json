@@ -6,8 +6,17 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "ms-python.python"
-      ]
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ],
+      "settings": {
+        "python.analysis.extraPaths": [
+          "/opt/jax",
+          "/opt/flax",
+          "/opt/jaxlibs",
+          "/opt/nsys-jax"
+        ]
+      }
     }
   }
 }
