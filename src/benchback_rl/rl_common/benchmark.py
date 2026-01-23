@@ -98,14 +98,17 @@ def run_all_benchmarks() -> None:
                 use_wandb=True,
                 notes="experiment 3: various compilation settings with synced timing"
             )
+            # fully compiled
             run_ppo_benchmark(config_template("torch", "torch.compile"))
             run_ppo_benchmark(config_template("linen", "jax.jit"))
             run_ppo_benchmark(config_template("nnx", "nnx.cached_partial"))
+            # no compilation
             run_ppo_benchmark(config_template("torch", "none"))
             run_ppo_benchmark(config_template("linen", "none"))
             run_ppo_benchmark(config_template("nnx", "none"))
-            run_ppo_benchmark(config_template("torch", "torch.compile"))
-            run_ppo_benchmark(config_template("torch", "nnx.jit"))
+            # partial compilation
+            run_ppo_benchmark(config_template("nnx", "nnx.jit"))
+            run_ppo_benchmark(config_template("torch", "torch.nocompile/env.jit"))
 
 
 def run_ppo_benchmark(
@@ -122,7 +125,7 @@ def run_ppo_benchmark(
     if config.framework == "torch":
         import torch
         from benchback_rl import rl_torch
-        env = rl_torch.TorchEnv(config.env_name, config.num_envs)
+        env = rl_torch.TorchEnv(config.env_name, config.num_envs, jit=(config.compile != "none"), seed=config.seed)
 
         agent: rl_torch.ActorCritic = rl_torch.DefaultActorCritic(
             obs_dim=env.obs_dim,
@@ -130,9 +133,9 @@ def run_ppo_benchmark(
             hidden_sizes=config.hidden_sizes,
         )
         # torch.compile provides ~2x speedup for the model forward pass
-        agent = torch.compile(agent)  # type: ignore[assignment]
+        if config.compile == "torch.compile":
+            agent = torch.compile(agent)  # type: ignore[assignment]
         torch_ppo = rl_torch.PPO(env=env, agent=agent, config=config, start_time=start_time)
-
         torch_ppo.train_from_scratch()
 
     elif config.framework == "linen":
