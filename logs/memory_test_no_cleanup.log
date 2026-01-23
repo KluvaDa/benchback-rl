@@ -1,0 +1,921 @@
+time="2026-01-23T15:54:06Z" level=warning msg="Found orphan containers ([docker-dev-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Image docker-run Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 523B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile.run
+#2 transferring dockerfile: 1.18kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for nvcr.io/nvidia/jax:25.10-py3
+#3 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 DONE 0.0s
+
+#6 [stage-0 1/7] FROM nvcr.io/nvidia/jax:25.10-py3@sha256:d2ffc0baf559eab851c63aadb7ff4ecb1a22f8d79eb43e56a1229b1e34a47578
+#6 resolve nvcr.io/nvidia/jax:25.10-py3@sha256:d2ffc0baf559eab851c63aadb7ff4ecb1a22f8d79eb43e56a1229b1e34a47578 0.0s done
+#6 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 142.10kB done
+#5 DONE 0.0s
+
+#7 [stage-0 2/7] WORKDIR /workspace
+#7 CACHED
+
+#8 [stage-0 3/7] COPY requirements.txt ./
+#8 CACHED
+
+#9 [stage-0 4/7] RUN --mount=type=cache,target=/root/.cache/pip     pip install -r requirements.txt
+#9 CACHED
+
+#10 [stage-0 5/7] COPY src/ src/
+#10 DONE 0.0s
+
+#11 [stage-0 6/7] COPY pyproject.toml README.md ./
+#11 DONE 0.1s
+
+#12 [stage-0 7/7] RUN --mount=type=cache,target=/root/.cache/pip     pip install --no-deps .
+#12 0.605 Processing /workspace
+#12 0.606   Installing build dependencies: started
+#12 2.310   Installing build dependencies: finished with status 'done'
+#12 2.310   Getting requirements to build wheel: started
+#12 2.390   Getting requirements to build wheel: finished with status 'done'
+#12 2.391   Preparing metadata (pyproject.toml): started
+#12 2.501   Preparing metadata (pyproject.toml): finished with status 'done'
+#12 2.503 Building wheels for collected packages: benchback-rl
+#12 2.504   Building wheel for benchback-rl (pyproject.toml): started
+#12 2.540   Building wheel for benchback-rl (pyproject.toml): finished with status 'done'
+#12 2.540   Created wheel for benchback-rl: filename=benchback_rl-0.1.0-py3-none-any.whl size=44380 sha256=302dec84628f9567940bb9bcffdb102d41b9e2f95930e8aaeef5fceacb03626d
+#12 2.541   Stored in directory: /tmp/pip-ephem-wheel-cache-77ebxqaf/wheels/b0/41/ab/4e04a8678980f3355548f1261923479fbf2a713a7393a7dea8
+#12 2.543 Successfully built benchback-rl
+#12 2.543 Installing collected packages: benchback-rl
+#12 2.593 Successfully installed benchback-rl-0.1.0
+#12 2.593 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+#12 2.726 
+#12 2.726 [notice] A new release of pip is available: 23.3.1 -> 25.3
+#12 2.726 [notice] To update, run: python3 -m pip install --upgrade pip
+#12 DONE 2.8s
+
+#13 exporting to image
+#13 exporting layers
+#13 exporting layers 0.2s done
+#13 exporting manifest sha256:87501b7f08f5b6a2e59f0defa52c740390a2f2b7bafc5118d4c98245b7dd142e 0.0s done
+#13 exporting config sha256:19e7c2e5ddf990aeaf966e565d760f8be575e153792dc26584616df1a39cb9f5 0.0s done
+#13 exporting attestation manifest sha256:288f0aa54723966bfb0d08fd147c33c0d5398119b536e17b89862b1fc643f9d0 0.0s done
+#13 exporting manifest list sha256:0138fd88b58c21054c43bbd445e02c09a6ca52e4a877bba31aa3c754c8ab7d35 0.0s done
+#13 naming to docker.io/library/docker-run:latest
+#13 naming to docker.io/library/docker-run:latest done
+#13 unpacking to docker.io/library/docker-run:latest
+#13 unpacking to docker.io/library/docker-run:latest 30.5s done
+#13 DONE 30.8s
+
+#14 resolving provenance for metadata file
+#14 DONE 0.0s
+ Image docker-run Built 
+ Container docker-run-run-0c40c0af041c Creating 
+ Container docker-run-run-0c40c0af041c Created 
+
+=========
+== JAX ==
+=========
+
+NVIDIA Release 25.10 (build 36776647)
+Container image Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+Various files include modifications (c) NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+GOVERNING TERMS: The software and materials are governed by the NVIDIA Software License Agreement
+(found at https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-software-license-agreement/)
+and the Product-Specific Terms for NVIDIA AI Products
+(found at https://www.nvidia.com/en-us/agreements/enterprise-software/product-specific-terms-for-ai-products/).
+
+Training:   0%|          | 0/1 [00:00<?, ?it/s]================================================================================
+MEMORY TEST - cleanup_enabled=False
+================================================================================
+#   Framework Size     Rep  RAM GB   Torch Alloc  JAX Use   
+--------------------------------------------------------------------------------
+Training:   0%|          | 0/1 [00:04<?, ?it/s, reward=N/A, kl=0.0003]Training: 100%|██████████| 1/1 [00:04<00:00,  4.45s/it, reward=N/A, kl=0.0003]Training: 100%|██████████| 1/1 [00:04<00:00,  4.45s/it, reward=N/A, kl=0.0003]
+Training:   0%|          | 0/1 [00:00<?, ?it/s]
+Training completed in 0.1 minutes
+Iteration 0: 6.986s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 4.0279s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 0.4236s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+0   torch    small    0    2.43     0.02         0.00      
+Training:   0%|          | 0/1 [00:05<?, ?it/s, reward=N/A, kl=0.0004]Training: 100%|██████████| 1/1 [00:05<00:00,  5.32s/it, reward=N/A, kl=0.0004]Training: 100%|██████████| 1/1 [00:05<00:00,  5.32s/it, reward=N/A, kl=0.0004]
+
+Training completed in 0.1 minutes
+Iteration 0: 7.998s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.6244s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 2.6725s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+1   linen    small    0    2.67     0.02         0.00      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:05<?, ?it/s, reward=N/A, kl=0.0006]Training: 100%|██████████| 1/1 [00:05<00:00,  5.34s/it, reward=N/A, kl=0.0006]Training: 100%|██████████| 1/1 [00:05<00:00,  5.34s/it, reward=N/A, kl=0.0006]
+Training:   0%|          | 0/1 [00:00<?, ?it/s]
+Training completed in 0.1 minutes
+Iteration 0: 6.179s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.9380s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 2.3578s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+2   nnx      small    0    2.73     0.02         0.00      
+Training:   0%|          | 0/1 [00:04<?, ?it/s, reward=N/A, kl=0.0038]Training: 100%|██████████| 1/1 [00:04<00:00,  4.11s/it, reward=N/A, kl=0.0038]Training: 100%|██████████| 1/1 [00:04<00:00,  4.11s/it, reward=N/A, kl=0.0038]
+
+Training completed in 0.1 minutes
+Iteration 0: 4.402s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 3.8063s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 0.3051s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+3   torch    medium   0    2.73     0.02         0.00      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:05<?, ?it/s, reward=N/A, kl=0.0036]Training: 100%|██████████| 1/1 [00:05<00:00,  5.38s/it, reward=N/A, kl=0.0036]Training: 100%|██████████| 1/1 [00:05<00:00,  5.38s/it, reward=N/A, kl=0.0036]
+
+Training completed in 0.1 minutes
+Iteration 0: 7.351s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.5368s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 2.8013s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+4   linen    medium   0    2.82     0.02         0.00      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:05<?, ?it/s, reward=N/A, kl=0.0043]Training: 100%|██████████| 1/1 [00:05<00:00,  5.37s/it, reward=N/A, kl=0.0043]Training: 100%|██████████| 1/1 [00:05<00:00,  5.37s/it, reward=N/A, kl=0.0043]
+
+Training completed in 0.1 minutes
+Iteration 0: 5.699s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.7687s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 2.5663s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+5   nnx      medium   0    2.86     0.02         0.00      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:05<?, ?it/s, reward=N/A, kl=0.0080]Training: 100%|██████████| 1/1 [00:05<00:00,  5.10s/it, reward=N/A, kl=0.0080]Training: 100%|██████████| 1/1 [00:05<00:00,  5.10s/it, reward=N/A, kl=0.0080]
+
+Training completed in 0.1 minutes
+Iteration 0: 5.713s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 4.1742s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 0.9286s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+6   torch    large    0    2.86     0.02         0.00      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:06<?, ?it/s, reward=N/A, kl=0.0037]Training: 100%|██████████| 1/1 [00:06<00:00,  6.61s/it, reward=N/A, kl=0.0037]Training: 100%|██████████| 1/1 [00:06<00:00,  6.61s/it, reward=N/A, kl=0.0037]
+
+Training completed in 0.1 minutes
+Iteration 0: 8.702s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.6473s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 3.7012s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+7   linen    large    0    2.93     0.02         0.00      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:06<?, ?it/s, reward=N/A, kl=0.0058]Training: 100%|██████████| 1/1 [00:06<00:00,  6.67s/it, reward=N/A, kl=0.0058]Training: 100%|██████████| 1/1 [00:06<00:00,  6.67s/it, reward=N/A, kl=0.0058]
+Training:   0%|          | 0/1 [00:00<?, ?it/s]
+Training completed in 0.1 minutes
+Iteration 0: 7.047s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.9191s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 3.5184s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+8   nnx      large    0    2.97     0.02         0.12      
+Training:   0%|          | 0/1 [00:04<?, ?it/s, reward=N/A, kl=0.0009]Training: 100%|██████████| 1/1 [00:04<00:00,  4.07s/it, reward=N/A, kl=0.0009]Training: 100%|██████████| 1/1 [00:04<00:00,  4.07s/it, reward=N/A, kl=0.0009]
+Training:   0%|          | 0/1 [00:00<?, ?it/s]
+Training completed in 0.1 minutes
+Iteration 0: 4.362s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 3.8045s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 0.2700s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+9   torch    small    1    2.97     0.02         0.12      
+Training:   0%|          | 0/1 [00:05<?, ?it/s, reward=N/A, kl=0.0008]Training: 100%|██████████| 1/1 [00:05<00:00,  5.21s/it, reward=N/A, kl=0.0008]Training: 100%|██████████| 1/1 [00:05<00:00,  5.21s/it, reward=N/A, kl=0.0008]
+
+Training completed in 0.1 minutes
+Iteration 0: 5.517s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.7121s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 2.4807s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+10  linen    small    1    2.99     0.02         0.12      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:05<?, ?it/s, reward=N/A, kl=0.0006]Training: 100%|██████████| 1/1 [00:05<00:00,  5.16s/it, reward=N/A, kl=0.0006]Training: 100%|██████████| 1/1 [00:05<00:00,  5.16s/it, reward=N/A, kl=0.0006]
+Training:   0%|          | 0/1 [00:00<?, ?it/s]
+Training completed in 0.1 minutes
+Iteration 0: 5.483s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.7632s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 2.3790s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+11  nnx      small    1    3.02     0.02         0.12      
+Training:   0%|          | 0/1 [00:04<?, ?it/s, reward=N/A, kl=0.0022]Training: 100%|██████████| 1/1 [00:04<00:00,  4.15s/it, reward=N/A, kl=0.0022]Training: 100%|██████████| 1/1 [00:04<00:00,  4.15s/it, reward=N/A, kl=0.0022]
+
+Training completed in 0.1 minutes
+Iteration 0: 4.443s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 3.8449s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 0.3042s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+12  torch    medium   1    3.02     0.02         0.12      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:05<?, ?it/s, reward=N/A, kl=0.0022]Training: 100%|██████████| 1/1 [00:05<00:00,  5.30s/it, reward=N/A, kl=0.0022]Training: 100%|██████████| 1/1 [00:05<00:00,  5.30s/it, reward=N/A, kl=0.0022]
+
+Training completed in 0.1 minutes
+Iteration 0: 5.611s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.5448s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 2.7143s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+13  linen    medium   1    3.06     0.02         0.12      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:05<?, ?it/s, reward=N/A, kl=0.0043]Training: 100%|██████████| 1/1 [00:05<00:00,  5.42s/it, reward=N/A, kl=0.0043]Training: 100%|██████████| 1/1 [00:05<00:00,  5.42s/it, reward=N/A, kl=0.0043]
+
+Training completed in 0.1 minutes
+Iteration 0: 5.745s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.8016s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 2.5763s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+14  nnx      medium   1    3.09     0.02         0.13      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:04<?, ?it/s, reward=N/A, kl=0.0055]Training: 100%|██████████| 1/1 [00:04<00:00,  4.83s/it, reward=N/A, kl=0.0055]Training: 100%|██████████| 1/1 [00:04<00:00,  4.83s/it, reward=N/A, kl=0.0055]
+Training:   0%|          | 0/1 [00:00<?, ?it/s]
+Training completed in 0.1 minutes
+Iteration 0: 5.439s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 3.9132s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 0.9146s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+15  torch    large    1    3.09     0.02         0.13      
+Training:   0%|          | 0/1 [00:06<?, ?it/s, reward=N/A, kl=0.0079]Training: 100%|██████████| 1/1 [00:06<00:00,  6.82s/it, reward=N/A, kl=0.0079]Training: 100%|██████████| 1/1 [00:06<00:00,  6.82s/it, reward=N/A, kl=0.0079]
+
+Training completed in 0.1 minutes
+Iteration 0: 7.174s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.9503s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 3.6107s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+16  linen    large    1    3.12     0.02         0.13      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:06<?, ?it/s, reward=N/A, kl=0.0058]Training: 100%|██████████| 1/1 [00:06<00:00,  6.70s/it, reward=N/A, kl=0.0058]Training: 100%|██████████| 1/1 [00:06<00:00,  6.70s/it, reward=N/A, kl=0.0058]
+Training:   0%|          | 0/1 [00:00<?, ?it/s]
+Training completed in 0.1 minutes
+Iteration 0: 7.079s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.9582s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 3.5084s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+17  nnx      large    1    3.16     0.02         0.25      
+Training:   0%|          | 0/1 [00:04<?, ?it/s, reward=N/A, kl=0.0005]Training: 100%|██████████| 1/1 [00:04<00:00,  4.10s/it, reward=N/A, kl=0.0005]Training: 100%|██████████| 1/1 [00:04<00:00,  4.10s/it, reward=N/A, kl=0.0005]
+Training:   0%|          | 0/1 [00:00<?, ?it/s]
+Training completed in 0.1 minutes
+Iteration 0: 4.391s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 3.8298s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 0.2719s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+18  torch    small    2    3.16     0.02         0.25      
+Training:   0%|          | 0/1 [00:05<?, ?it/s, reward=N/A, kl=0.0012]Training: 100%|██████████| 1/1 [00:05<00:00,  5.00s/it, reward=N/A, kl=0.0012]Training: 100%|██████████| 1/1 [00:05<00:00,  5.00s/it, reward=N/A, kl=0.0012]
+
+Training completed in 0.1 minutes
+Iteration 0: 5.307s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.4925s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 2.4901s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+19  linen    small    2    3.19     0.02         0.25      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:05<?, ?it/s, reward=N/A, kl=0.0006]Training: 100%|██████████| 1/1 [00:05<00:00,  5.20s/it, reward=N/A, kl=0.0006]Training: 100%|██████████| 1/1 [00:05<00:00,  5.20s/it, reward=N/A, kl=0.0006]
+Training:   0%|          | 0/1 [00:00<?, ?it/s]
+Training completed in 0.1 minutes
+Iteration 0: 5.524s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.7929s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 2.3913s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+20  nnx      small    2    3.22     0.02         0.25      
+Training:   0%|          | 0/1 [00:04<?, ?it/s, reward=N/A, kl=0.0032]Training: 100%|██████████| 1/1 [00:04<00:00,  4.15s/it, reward=N/A, kl=0.0032]Training: 100%|██████████| 1/1 [00:04<00:00,  4.15s/it, reward=N/A, kl=0.0032]
+
+Training completed in 0.1 minutes
+Iteration 0: 4.448s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 3.8483s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 0.3040s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+21  torch    medium   2    3.23     0.02         0.25      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:05<?, ?it/s, reward=N/A, kl=0.0038]Training: 100%|██████████| 1/1 [00:05<00:00,  5.68s/it, reward=N/A, kl=0.0038]Training: 100%|██████████| 1/1 [00:05<00:00,  5.68s/it, reward=N/A, kl=0.0038]
+
+Training completed in 0.1 minutes
+Iteration 0: 5.990s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.8700s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 2.7687s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+22  linen    medium   2    3.23     0.02         0.25      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:05<?, ?it/s, reward=N/A, kl=0.0043]Training: 100%|██████████| 1/1 [00:05<00:00,  5.47s/it, reward=N/A, kl=0.0043]Training: 100%|██████████| 1/1 [00:05<00:00,  5.48s/it, reward=N/A, kl=0.0043]
+Training:   0%|          | 0/1 [00:00<?, ?it/s]
+Training completed in 0.1 minutes
+Iteration 0: 5.809s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.8367s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 2.5985s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+23  nnx      medium   2    3.27     0.02         0.25      
+Training:   0%|          | 0/1 [00:04<?, ?it/s, reward=N/A, kl=0.0079]Training: 100%|██████████| 1/1 [00:04<00:00,  4.87s/it, reward=N/A, kl=0.0079]Training: 100%|██████████| 1/1 [00:04<00:00,  4.87s/it, reward=N/A, kl=0.0079]
+Training:   0%|          | 0/1 [00:00<?, ?it/s]
+Training completed in 0.1 minutes
+Iteration 0: 5.487s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 3.9413s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 0.9332s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+24  torch    large    2    3.27     0.02         0.25      
+Training:   0%|          | 0/1 [00:06<?, ?it/s, reward=N/A, kl=0.0061]Training: 100%|██████████| 1/1 [00:06<00:00,  6.52s/it, reward=N/A, kl=0.0061]Training: 100%|██████████| 1/1 [00:06<00:00,  6.52s/it, reward=N/A, kl=0.0061]
+
+Training completed in 0.1 minutes
+Iteration 0: 6.874s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.6537s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 3.6072s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+25  linen    large    2    3.32     0.02         0.25      
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:06<?, ?it/s, reward=N/A, kl=0.0058]Training: 100%|██████████| 1/1 [00:06<00:00,  6.69s/it, reward=N/A, kl=0.0058]Training: 100%|██████████| 1/1 [00:06<00:00,  6.69s/it, reward=N/A, kl=0.0058]
+
+Training completed in 0.1 minutes
+Iteration 0: 7.071s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 2.9289s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 3.5287s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: N/A
+26  nnx      large    2    3.36     0.02         0.37      
+================================================================================
+Completed 27 benchmarks
+
+================================================================================
+JSON RESULTS:
+================================================================================
+[
+  {
+    "step": 0,
+    "repeat": 0,
+    "framework": "torch",
+    "model_size": "small",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 1.4855804443359375,
+      "torch_allocated_gb": 0.0,
+      "torch_reserved_gb": 0.0,
+      "jax_in_use_gb": 0.0,
+      "jax_peak_gb": 4.76837158203125e-07
+    },
+    "mem_after": {
+      "ram_gb": 2.4261627197265625,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.0234375,
+      "jax_in_use_gb": 0.0,
+      "jax_peak_gb": 1.33514404296875e-05
+    }
+  },
+  {
+    "step": 1,
+    "repeat": 0,
+    "framework": "linen",
+    "model_size": "small",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 2.4261627197265625,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.0234375,
+      "jax_in_use_gb": 0.0,
+      "jax_peak_gb": 1.33514404296875e-05
+    },
+    "mem_after": {
+      "ram_gb": 2.6739540100097656,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.0234375,
+      "jax_in_use_gb": 0.0,
+      "jax_peak_gb": 0.032770395278930664
+    }
+  },
+  {
+    "step": 2,
+    "repeat": 0,
+    "framework": "nnx",
+    "model_size": "small",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 2.6739540100097656,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.0234375,
+      "jax_in_use_gb": 0.0,
+      "jax_peak_gb": 0.032770395278930664
+    },
+    "mem_after": {
+      "ram_gb": 2.7257041931152344,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.0234375,
+      "jax_in_use_gb": 0.0008895397186279297,
+      "jax_peak_gb": 0.032770395278930664
+    }
+  },
+  {
+    "step": 3,
+    "repeat": 0,
+    "framework": "torch",
+    "model_size": "medium",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 2.7257041931152344,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.0234375,
+      "jax_in_use_gb": 0.0008895397186279297,
+      "jax_peak_gb": 0.032770395278930664
+    },
+    "mem_after": {
+      "ram_gb": 2.7292823791503906,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.033203125,
+      "jax_in_use_gb": 0.0008895397186279297,
+      "jax_peak_gb": 0.032770395278930664
+    }
+  },
+  {
+    "step": 4,
+    "repeat": 0,
+    "framework": "linen",
+    "model_size": "medium",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 2.7292823791503906,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.033203125,
+      "jax_in_use_gb": 0.0008895397186279297,
+      "jax_peak_gb": 0.032770395278930664
+    },
+    "mem_after": {
+      "ram_gb": 2.8219833374023438,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.033203125,
+      "jax_in_use_gb": 0.0008895397186279297,
+      "jax_peak_gb": 0.03994584083557129
+    }
+  },
+  {
+    "step": 5,
+    "repeat": 0,
+    "framework": "nnx",
+    "model_size": "medium",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 2.8219833374023438,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.033203125,
+      "jax_in_use_gb": 0.0008895397186279297,
+      "jax_peak_gb": 0.03994584083557129
+    },
+    "mem_after": {
+      "ram_gb": 2.855731964111328,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.033203125,
+      "jax_in_use_gb": 0.00479435920715332,
+      "jax_peak_gb": 0.03994584083557129
+    }
+  },
+  {
+    "step": 6,
+    "repeat": 0,
+    "framework": "torch",
+    "model_size": "large",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 2.855731964111328,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.033203125,
+      "jax_in_use_gb": 0.00479435920715332,
+      "jax_peak_gb": 0.03994584083557129
+    },
+    "mem_after": {
+      "ram_gb": 2.857227325439453,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.248046875,
+      "jax_in_use_gb": 0.00479435920715332,
+      "jax_peak_gb": 0.03994584083557129
+    }
+  },
+  {
+    "step": 7,
+    "repeat": 0,
+    "framework": "linen",
+    "model_size": "large",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 2.857227325439453,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.248046875,
+      "jax_in_use_gb": 0.00479435920715332,
+      "jax_peak_gb": 0.03994584083557129
+    },
+    "mem_after": {
+      "ram_gb": 2.928009033203125,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.248046875,
+      "jax_in_use_gb": 0.00479435920715332,
+      "jax_peak_gb": 0.30317163467407227
+    }
+  },
+  {
+    "step": 8,
+    "repeat": 0,
+    "framework": "nnx",
+    "model_size": "large",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 2.928009033203125,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.248046875,
+      "jax_in_use_gb": 0.00479435920715332,
+      "jax_peak_gb": 0.30317163467407227
+    },
+    "mem_after": {
+      "ram_gb": 2.9710769653320312,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.248046875,
+      "jax_in_use_gb": 0.12309837341308594,
+      "jax_peak_gb": 0.34299516677856445
+    }
+  },
+  {
+    "step": 9,
+    "repeat": 1,
+    "framework": "torch",
+    "model_size": "small",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 2.9710769653320312,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.248046875,
+      "jax_in_use_gb": 0.12309837341308594,
+      "jax_peak_gb": 0.34299516677856445
+    },
+    "mem_after": {
+      "ram_gb": 2.9723434448242188,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.248046875,
+      "jax_in_use_gb": 0.12309837341308594,
+      "jax_peak_gb": 0.34299516677856445
+    }
+  },
+  {
+    "step": 10,
+    "repeat": 1,
+    "framework": "linen",
+    "model_size": "small",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 2.9723434448242188,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.248046875,
+      "jax_in_use_gb": 0.12309837341308594,
+      "jax_peak_gb": 0.34299516677856445
+    },
+    "mem_after": {
+      "ram_gb": 2.98504638671875,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.248046875,
+      "jax_in_use_gb": 0.12309837341308594,
+      "jax_peak_gb": 0.34299516677856445
+    }
+  },
+  {
+    "step": 11,
+    "repeat": 1,
+    "framework": "nnx",
+    "model_size": "small",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 2.98504638671875,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.248046875,
+      "jax_in_use_gb": 0.12309837341308594,
+      "jax_peak_gb": 0.34299516677856445
+    },
+    "mem_after": {
+      "ram_gb": 3.0152359008789062,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.248046875,
+      "jax_in_use_gb": 0.12401962280273438,
+      "jax_peak_gb": 0.34299516677856445
+    }
+  },
+  {
+    "step": 12,
+    "repeat": 1,
+    "framework": "torch",
+    "model_size": "medium",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.0152359008789062,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.248046875,
+      "jax_in_use_gb": 0.12401962280273438,
+      "jax_peak_gb": 0.34299516677856445
+    },
+    "mem_after": {
+      "ram_gb": 3.0167312622070312,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.12401962280273438,
+      "jax_peak_gb": 0.34299516677856445
+    }
+  },
+  {
+    "step": 13,
+    "repeat": 1,
+    "framework": "linen",
+    "model_size": "medium",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.0167312622070312,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.12401962280273438,
+      "jax_peak_gb": 0.34299516677856445
+    },
+    "mem_after": {
+      "ram_gb": 3.061298370361328,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.12401962280273438,
+      "jax_peak_gb": 0.34299516677856445
+    }
+  },
+  {
+    "step": 14,
+    "repeat": 1,
+    "framework": "nnx",
+    "model_size": "medium",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.061298370361328,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.12401962280273438,
+      "jax_peak_gb": 0.34299516677856445
+    },
+    "mem_after": {
+      "ram_gb": 3.094196319580078,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.12779641151428223,
+      "jax_peak_gb": 0.34299516677856445
+    }
+  },
+  {
+    "step": 15,
+    "repeat": 1,
+    "framework": "torch",
+    "model_size": "large",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.094196319580078,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.12779641151428223,
+      "jax_peak_gb": 0.34299516677856445
+    },
+    "mem_after": {
+      "ram_gb": 3.0945396423339844,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.12779641151428223,
+      "jax_peak_gb": 0.34299516677856445
+    }
+  },
+  {
+    "step": 16,
+    "repeat": 1,
+    "framework": "linen",
+    "model_size": "large",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.0945396423339844,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.12779641151428223,
+      "jax_peak_gb": 0.34299516677856445
+    },
+    "mem_after": {
+      "ram_gb": 3.1187400817871094,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.12779641151428223,
+      "jax_peak_gb": 0.4278101921081543
+    }
+  },
+  {
+    "step": 17,
+    "repeat": 1,
+    "framework": "nnx",
+    "model_size": "large",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.1187400817871094,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.12779641151428223,
+      "jax_peak_gb": 0.4278101921081543
+    },
+    "mem_after": {
+      "ram_gb": 3.1581497192382812,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.24628210067749023,
+      "jax_peak_gb": 0.46785497665405273
+    }
+  },
+  {
+    "step": 18,
+    "repeat": 2,
+    "framework": "torch",
+    "model_size": "small",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.1581497192382812,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.24628210067749023,
+      "jax_peak_gb": 0.46785497665405273
+    },
+    "mem_after": {
+      "ram_gb": 3.1593399047851562,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.24628210067749023,
+      "jax_peak_gb": 0.46785497665405273
+    }
+  },
+  {
+    "step": 19,
+    "repeat": 2,
+    "framework": "linen",
+    "model_size": "small",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.1593399047851562,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.24628210067749023,
+      "jax_peak_gb": 0.46785497665405273
+    },
+    "mem_after": {
+      "ram_gb": 3.1935462951660156,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.24628210067749023,
+      "jax_peak_gb": 0.46785497665405273
+    }
+  },
+  {
+    "step": 20,
+    "repeat": 2,
+    "framework": "nnx",
+    "model_size": "small",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.1935462951660156,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.24628210067749023,
+      "jax_peak_gb": 0.46785497665405273
+    },
+    "mem_after": {
+      "ram_gb": 3.2237014770507812,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.2473292350769043,
+      "jax_peak_gb": 0.46785497665405273
+    }
+  },
+  {
+    "step": 21,
+    "repeat": 2,
+    "framework": "torch",
+    "model_size": "medium",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.2237014770507812,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.2473292350769043,
+      "jax_peak_gb": 0.46785497665405273
+    },
+    "mem_after": {
+      "ram_gb": 3.2252540588378906,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.2473292350769043,
+      "jax_peak_gb": 0.46785497665405273
+    }
+  },
+  {
+    "step": 22,
+    "repeat": 2,
+    "framework": "linen",
+    "model_size": "medium",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.2252540588378906,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.2473292350769043,
+      "jax_peak_gb": 0.46785497665405273
+    },
+    "mem_after": {
+      "ram_gb": 3.2332839965820312,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.2473292350769043,
+      "jax_peak_gb": 0.46785497665405273
+    }
+  },
+  {
+    "step": 23,
+    "repeat": 2,
+    "framework": "nnx",
+    "model_size": "medium",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.2332839965820312,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.2473292350769043,
+      "jax_peak_gb": 0.46785497665405273
+    },
+    "mem_after": {
+      "ram_gb": 3.265422821044922,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.25116491317749023,
+      "jax_peak_gb": 0.46785497665405273
+    }
+  },
+  {
+    "step": 24,
+    "repeat": 2,
+    "framework": "torch",
+    "model_size": "large",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.265422821044922,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.25116491317749023,
+      "jax_peak_gb": 0.46785497665405273
+    },
+    "mem_after": {
+      "ram_gb": 3.2656631469726562,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.25116491317749023,
+      "jax_peak_gb": 0.46785497665405273
+    }
+  },
+  {
+    "step": 25,
+    "repeat": 2,
+    "framework": "linen",
+    "model_size": "large",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.2656631469726562,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.25116491317749023,
+      "jax_peak_gb": 0.46785497665405273
+    },
+    "mem_after": {
+      "ram_gb": 3.3211097717285156,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.25116491317749023,
+      "jax_peak_gb": 0.5511868000030518
+    }
+  },
+  {
+    "step": 26,
+    "repeat": 2,
+    "framework": "nnx",
+    "model_size": "large",
+    "cleanup_enabled": false,
+    "mem_before": {
+      "ram_gb": 3.3211097717285156,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.25116491317749023,
+      "jax_peak_gb": 0.5511868000030518
+    },
+    "mem_after": {
+      "ram_gb": 3.360137939453125,
+      "torch_allocated_gb": 0.016845703125,
+      "torch_reserved_gb": 0.25,
+      "jax_in_use_gb": 0.36953020095825195,
+      "jax_peak_gb": 0.5911006927490234
+    }
+  }
+]

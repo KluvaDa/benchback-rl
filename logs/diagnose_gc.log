@@ -1,0 +1,194 @@
+time="2026-01-23T16:50:31Z" level=warning msg="Found orphan containers ([docker-dev-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Image docker-run Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 523B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile.run
+#2 transferring dockerfile: 1.18kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for nvcr.io/nvidia/jax:25.10-py3
+#3 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 DONE 0.0s
+
+#6 [stage-0 1/7] FROM nvcr.io/nvidia/jax:25.10-py3@sha256:d2ffc0baf559eab851c63aadb7ff4ecb1a22f8d79eb43e56a1229b1e34a47578
+#6 resolve nvcr.io/nvidia/jax:25.10-py3@sha256:d2ffc0baf559eab851c63aadb7ff4ecb1a22f8d79eb43e56a1229b1e34a47578 0.0s done
+#6 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 1.49kB done
+#5 DONE 0.0s
+
+#7 [stage-0 2/7] WORKDIR /workspace
+#7 CACHED
+
+#8 [stage-0 4/7] RUN --mount=type=cache,target=/root/.cache/pip     pip install -r requirements.txt
+#8 CACHED
+
+#9 [stage-0 3/7] COPY requirements.txt ./
+#9 CACHED
+
+#10 [stage-0 5/7] COPY src/ src/
+#10 CACHED
+
+#11 [stage-0 6/7] COPY pyproject.toml README.md ./
+#11 CACHED
+
+#12 [stage-0 7/7] RUN --mount=type=cache,target=/root/.cache/pip     pip install --no-deps .
+#12 CACHED
+
+#13 exporting to image
+#13 exporting layers done
+#13 exporting manifest sha256:52b1f32abfab72a71477778d620e8d730ffb59e0e2262dca1e8a3da3bead6fe0 done
+#13 exporting config sha256:f5fa09441e462c284792bb46cc15d010b8e95538f0562d33a09b876959057c13 done
+#13 exporting attestation manifest sha256:9d923e8ee807259925bafbf930092c0991ba235b06f45fe75f633db162d20be7 0.0s done
+#13 exporting manifest list sha256:c8f0eb1bc17b9e49107e17043cec51bf0da51f759738cd2b6facbf0303dd78a3 0.0s done
+#13 naming to docker.io/library/docker-run:latest done
+#13 unpacking to docker.io/library/docker-run:latest 0.0s done
+#13 DONE 0.1s
+
+#14 resolving provenance for metadata file
+#14 DONE 0.0s
+ Image docker-run Built 
+ Container docker-run-run-61f7d2672634 Creating 
+ Container docker-run-run-61f7d2672634 Created 
+
+=========
+== JAX ==
+=========
+
+NVIDIA Release 25.10 (build 36776647)
+Container image Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+Various files include modifications (c) NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+
+GOVERNING TERMS: The software and materials are governed by the NVIDIA Software License Agreement
+(found at https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-software-license-agreement/)
+and the Product-Specific Terms for NVIDIA AI Products
+(found at https://www.nvidia.com/en-us/agreements/enterprise-software/product-specific-terms-for-ai-products/).
+
+Training:   0%|          | 0/1 [00:00<?, ?it/s]================================================================================
+CLEANUP DIAGNOSIS TEST - Mode: GC
+================================================================================
+NOTE: Run each mode in a separate container for valid comparison!
+================================================================================
+
+#    Size     Before     After Run    After Cleanup 
+------------------------------------------------------------
+Training:   0%|          | 0/1 [00:03<?, ?it/s, reward=18.9, kl=0.0000]Training: 100%|██████████| 1/1 [00:03<00:00,  3.54s/it, reward=18.9, kl=0.0000]Training: 100%|██████████| 1/1 [00:03<00:00,  3.54s/it, reward=18.9, kl=0.0000]
+
+Training completed in 0.1 minutes
+Iteration 0: 6.307s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 1.6559s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 1.8437s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: 18.9
+0    small    0.000      0.000        0.000         
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:03<?, ?it/s, reward=18.9, kl=0.0001]Training: 100%|██████████| 1/1 [00:03<00:00,  3.50s/it, reward=18.9, kl=0.0001]Training: 100%|██████████| 1/1 [00:03<00:00,  3.50s/it, reward=18.9, kl=0.0001]
+
+Training completed in 0.1 minutes
+Iteration 0: 5.147s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 1.5264s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 1.9733s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: 18.9
+1    medium   0.000      0.003        0.003         
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:04<?, ?it/s, reward=18.9, kl=0.0016]Training: 100%|██████████| 1/1 [00:04<00:00,  4.04s/it, reward=18.9, kl=0.0016]Training: 100%|██████████| 1/1 [00:04<00:00,  4.04s/it, reward=18.9, kl=0.0016]
+
+Training completed in 0.1 minutes
+Iteration 0: 5.721s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 1.6007s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 2.4257s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: 18.9
+2    large    0.003      0.121        0.121         
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:03<?, ?it/s, reward=18.9, kl=0.0000]Training: 100%|██████████| 1/1 [00:03<00:00,  3.14s/it, reward=18.9, kl=0.0000]Training: 100%|██████████| 1/1 [00:03<00:00,  3.14s/it, reward=18.9, kl=0.0000]
+
+Training completed in 0.1 minutes
+Iteration 0: 3.345s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 1.4629s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 1.6777s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: 18.9
+3    small    0.121      0.121        0.121         
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:03<?, ?it/s, reward=18.9, kl=0.0001]Training: 100%|██████████| 1/1 [00:03<00:00,  3.38s/it, reward=18.9, kl=0.0001]Training: 100%|██████████| 1/1 [00:03<00:00,  3.38s/it, reward=18.9, kl=0.0001]
+
+Training completed in 0.1 minutes
+Iteration 0: 3.587s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 1.5026s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 1.8700s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: 18.9
+4    medium   0.121      0.124        0.124         
+Training:   0%|          | 0/1 [00:00<?, ?it/s]Training:   0%|          | 0/1 [00:03<?, ?it/s, reward=18.9, kl=0.0016]Training: 100%|██████████| 1/1 [00:03<00:00,  3.88s/it, reward=18.9, kl=0.0016]Training: 100%|██████████| 1/1 [00:03<00:00,  3.88s/it, reward=18.9, kl=0.0016]
+
+Training completed in 0.1 minutes
+Iteration 0: 4.158s (from start_time)
+Iteration avg 1:7: 0.000s, avg 7+: 0.000s
+Rollout 0: 1.5671s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Update 0: 2.3006s, avg 1:7: 0.0000s, avg 7+: 0.0000s
+Final average reward: 18.9
+5    large    0.124      0.242        0.242         
+------------------------------------------------------------
+VRAM growth (gc): 0.000 GB -> 0.242 GB (+0.242 GB)
+
+================================================================================
+JSON RESULTS:
+================================================================================
+[
+  {
+    "cleanup_mode": "gc",
+    "step": 0,
+    "size": "small",
+    "before": 0.0,
+    "after_run": 0.0001995563507080078,
+    "after_cleanup": 0.0001995563507080078
+  },
+  {
+    "cleanup_mode": "gc",
+    "step": 1,
+    "size": "medium",
+    "before": 0.0001995563507080078,
+    "after_run": 0.0033876895904541016,
+    "after_cleanup": 0.0033876895904541016
+  },
+  {
+    "cleanup_mode": "gc",
+    "step": 2,
+    "size": "large",
+    "before": 0.0033876895904541016,
+    "after_run": 0.12093687057495117,
+    "after_cleanup": 0.12093687057495117
+  },
+  {
+    "cleanup_mode": "gc",
+    "step": 3,
+    "size": "small",
+    "before": 0.12093687057495117,
+    "after_run": 0.1211392879486084,
+    "after_cleanup": 0.1211392879486084
+  },
+  {
+    "cleanup_mode": "gc",
+    "step": 4,
+    "size": "medium",
+    "before": 0.1211392879486084,
+    "after_run": 0.12426877021789551,
+    "after_cleanup": 0.12426877021789551
+  },
+  {
+    "cleanup_mode": "gc",
+    "step": 5,
+    "size": "large",
+    "before": 0.12426877021789551,
+    "after_run": 0.24181318283081055,
+    "after_cleanup": 0.24181318283081055
+  }
+]

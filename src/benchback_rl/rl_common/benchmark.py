@@ -1,22 +1,111 @@
 """Benchmark runner for PPO training."""
 
+import gc
+import os
 import time
 from typing import Any, cast, Literal
 
 import gymnax
+import psutil
 from gymnax.environments.spaces import Discrete
+import jax
+import jax.numpy as jnp
+from flax import nnx
+import torch
 import wandb
 
+from benchback_rl import rl_linen, rl_nnx, rl_torch
 from benchback_rl.rl_common.config import PPOConfig
+from benchback_rl.rl_linen.models import ModelParams
+from benchback_rl.rl_linen.ppo.rollout import EnvParamsVmapped
 
 # Type alias for gymnax environment (to work around complex union types)
 Env = Any
 
 
-def create_config(model: Literal["CartPole-v1", "Acrobot-v1!", "MountainCar-v0"]):
-    """ Creates the PPOConfig for the specific benchmark experiments that we will run.
-    Relies on the defaults from PPOConfig for the unspecified parameters.
+def _cleanup_memory() -> None:
+    """Clean up memory after a benchmark run to prevent accumulation.
+
+    OBSERVED ISSUES (from memory_test.py isolation tests):
+    - NNX leaks JAX GPU VRAM (0 -> 0.62 GB over 15 runs without cleanup)
+    - Linen does NOT leak JAX GPU VRAM (stays at 0.00 GB)
+    - All frameworks (torch, linen, nnx) accumulate RAM (~0.7-1.0 GB growth)
+
+    CLEANUP EFFECTIVENESS (from diagnose_*.log):
+    - jax.clear_caches() clears NNX VRAM leak: reduces growth from +0.24 GB to +0.12 GB
+    - gc.collect() does NOT help JAX VRAM (0.24 GB with or without)
+    - gc.collect() removes RAM accumulation across all frameworks
+      (unknown if RAM accumulation causes crashes)
+    - ~0.1 GB residual VRAM persists with NNX even after cleanup
+
+    SUSPICIONS:
+    - NNX cached_partial does not get cleared with jax.clear_caches() - it may still accumulate ram or vram
+
+    We keep all cleanup calls for safety across all frameworks.
     """
+    # gc.collect() - removes RAM accumulation across all frameworks
+    gc.collect()
+    
+    # jax.clear_caches() - clears NNX VRAM leak (linen doesn't leak)
+    jax.clear_caches()
+    
+    # Clear PyTorch's CUDA memory cache
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+    
+    # Clear torch.compile caches
+    try:
+        torch._dynamo.reset()
+    except Exception:
+        pass
+    
+    gc.collect()
+
+
+def _log_memory(label: str) -> dict[str, float]:
+    """Log current memory usage for debugging.
+    
+    Args:
+        label: A descriptive label for this memory snapshot (e.g., "before_run", "after_run")
+    
+    Returns:
+        Dictionary of memory metrics that can be logged to wandb.
+    """
+    metrics: dict[str, float] = {}
+    
+    # RAM usage
+    process = psutil.Process(os.getpid())
+    ram_gb = process.memory_info().rss / (1024 ** 3)
+    metrics[f"memory/{label}/ram_gb"] = ram_gb
+    print(f"[Memory {label}] RAM: {ram_gb:.2f} GB")
+    
+    # PyTorch GPU memory
+    if torch.cuda.is_available():
+        for i in range(torch.cuda.device_count()):
+            allocated_gb = torch.cuda.memory_allocated(i) / (1024 ** 3)
+            reserved_gb = torch.cuda.memory_reserved(i) / (1024 ** 3)
+            metrics[f"memory/{label}/torch_gpu{i}_allocated_gb"] = allocated_gb
+            metrics[f"memory/{label}/torch_gpu{i}_reserved_gb"] = reserved_gb
+            print(f"[Memory {label}] PyTorch GPU {i}: {allocated_gb:.2f} GB allocated, {reserved_gb:.2f} GB reserved")
+    
+    # JAX GPU memory
+    try:
+        for device in jax.devices():
+            if device.platform == "gpu":
+                stats = device.memory_stats()
+                if stats:
+                    bytes_in_use = stats.get("bytes_in_use", 0)
+                    peak_bytes = stats.get("peak_bytes_in_use", 0)
+                    jax_gb = bytes_in_use / (1024 ** 3)
+                    jax_peak_gb = peak_bytes / (1024 ** 3)
+                    metrics[f"memory/{label}/jax_{device.id}_gb"] = jax_gb
+                    metrics[f"memory/{label}/jax_{device.id}_peak_gb"] = jax_peak_gb
+                    print(f"[Memory {label}] JAX {device}: {jax_gb:.2f} GB in use, {jax_peak_gb:.2f} GB peak")
+    except Exception as e:
+        print(f"[Memory {label}] Could not get JAX memory stats: {e}")
+    
+    return metrics
 
 
 def run_all_benchmarks() -> None:
@@ -116,15 +205,18 @@ def run_ppo_benchmark(
     """Run a PPO training benchmark."""
     start_time = time.perf_counter()  # Capture at very beginning for initial overhead
     
+    # Log memory before run
+    pre_metrics = _log_memory("before_run")
+    
     if config.use_wandb:
         # config is saved in the train method
         wandb.init(
             project=config.wandb_project,
         )
+        # Log pre-run memory to wandb
+        wandb.log(pre_metrics, step=0)
 
     if config.framework == "torch":
-        import torch
-        from benchback_rl import rl_torch
         env = rl_torch.TorchEnv(config.env_name, config.num_envs, jit=(config.compile != "none"), seed=config.seed)
 
         agent: rl_torch.ActorCritic = rl_torch.DefaultActorCritic(
@@ -139,9 +231,6 @@ def run_ppo_benchmark(
         torch_ppo.train_from_scratch()
 
     elif config.framework == "linen":
-        from benchback_rl import rl_linen
-        from benchback_rl.rl_linen.models import ModelParams
-        from benchback_rl.rl_linen.ppo.rollout import EnvParamsVmapped
         # Create gymnax environment directly for JAX/Flax
         env_: Env
         env_params: EnvParamsVmapped
@@ -158,8 +247,6 @@ def run_ppo_benchmark(
         )
         
         # Initialize model parameters with dummy input
-        import jax
-        import jax.numpy as jnp
         obs_space = env_.observation_space(env_params)
         obs_dim: int = obs_space.shape[0]
         dummy_obs = jnp.zeros((1, obs_dim))
@@ -178,10 +265,6 @@ def run_ppo_benchmark(
         
         linen_ppo.train_from_scratch()
     elif config.framework == "nnx":
-        from benchback_rl import rl_nnx
-        from flax import nnx
-        import jax
-
         # Create rngs with all required streams from a single seed
         seed = config.seed if config.seed is not None else 0
         key = jax.random.PRNGKey(seed)
@@ -221,6 +304,17 @@ def run_ppo_benchmark(
     else:
         raise ValueError(f"Unsupported framework: {config.framework}")
 
+    # Log memory after run (before cleanup)
+    post_metrics = _log_memory("after_run")
+    if wandb.run is not None:
+        wandb.log(post_metrics)
+
     # Finish WandB run if active
     if wandb.run is not None:
         wandb.finish()
+
+    # Clean up to prevent memory accumulation across benchmark runs
+    _cleanup_memory()
+    
+    # Log memory after cleanup to verify cleanup effectiveness
+    _log_memory("after_cleanup")

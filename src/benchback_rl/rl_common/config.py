@@ -25,7 +25,7 @@ class PPOConfig:
     # torch: none, torch.compile, torch.nocompile/env.jit
     # linen: none, jax.jit
     # nnx: none, nnx.jit, nnx.cached_partial
-    compile: Literal["none", "torch.compile", "torch.nocompile/env.jit" "jax.jit", "nnx.jit", "nnx.cached_partial"] = "none"
+    compile: Literal["none", "torch.compile", "torch.nocompile/env.jit", "jax.jit", "nnx.jit", "nnx.cached_partial"] = "none"
 
     # network parameters
     hidden_sizes: tuple[int, ...] = (64, 64) # hidden dimensions of actor-critic network

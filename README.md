@@ -15,8 +15,14 @@ This repository is unfinished. I am actively working on it and it should be done
 - [ ] Analyse results and present findings in readme
 
 ### Current bugs and problems
-- In the middle of running benchmarks, everything halts quite suddenly. Something is clogging everything down. Suspected issues with docker, since everything is run sequentially within the same docker container and run.
 - The use of different drivers for jax and torch may still be a problem. It doesn't seem to slow anything down, like the transfer of data from jax to torch on the gpu using via DLPack, but vram usage may be affected and competing.
+
+## imporant debugging findings
+- flax.nnx cache_partial requires the annotation of static jax arrays or pytrees (specifically encountered with env.env_params) as Variables.
+In future version of jax (0.12+) a static annotations exist. In this version (0.11) we need to treat it as a Variable even though its static.
+- NNX causes a vram leak when running subsequent benchmarks in the same python script.
+jax.clear_caches() mostly addresses the leak, although there may be small leaks left by nnx.cached_partial().
+Some memory is also leaked and gc.collect() limits that across all frameworks - this may not be a problem and automatic garbage collection may still work well when running out of memory.
 
 # The rest of this readme is outdated
 
