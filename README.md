@@ -1,6 +1,25 @@
 # benchback-rl
 **Benchmarking Backends for Reinforcement Learning**: PyTorch vs JAX (Flax.NNX) vs JAX (Flax.Linen)
 
+## Work in progress & TODO
+This repository is unfinished. I am actively working on it and it should be done in the next weeks.
+
+### TODO
+- [x] Implement PPO in PyTorch
+- [x] Implement PPO in Jax, Flax.Linen
+- [x] Implement PPO in Jax, Flax.NNX
+- [x] Implement entrypoints and benchmarking experiments
+- [ ] Test and debug everything
+- [ ] Finalise Documentation and this readme
+- [ ] Run all benchmarks
+- [ ] Analyse results and present findings in readme
+
+### Current bugs and problems
+- In the middle of running benchmarks, everything halts quite suddenly. Something is clogging everything down. Suspected issues with docker, since everything is run sequentially within the same docker container and run.
+- The use of different drivers for jax and torch may still be a problem. It doesn't seem to slow anything down, like the transfer of data from jax to torch on the gpu using via DLPack, but vram usage may be affected and competing.
+
+# The rest of this readme is outdated
+
 ## Setup
 
 ### Environment Variables
