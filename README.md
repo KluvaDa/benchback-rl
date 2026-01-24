@@ -1,5 +1,9 @@
 # benchback-rl
-**Benchmarking Backends for Reinforcement Learning**: PyTorch vs JAX (Flax.NNX) vs JAX (Flax.Linen)
+**Benchmarking Backends for Reinforcement Learning**: Flax.NNX (JAX) vs Flax.Linen (JAX) vs PyTorch
+
+This project aims to compare the three frameworks in pracice, and to evaluate if it's worth starting new RL projects in the new Flax.NNX (Flax version 0.11), or the more mature Flax.Linen or PyTorch.
+
+This repository contains high quality implementation of PPO (Proximal Policy Optimization) that make use of GYMNAX environments (Reinforcement Learning Environments in JAX). 
 
 ## Work in progress & TODO
 This repository is unfinished. I am actively working on it and it should be done in the next weeks.
