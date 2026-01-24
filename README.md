@@ -3,7 +3,16 @@
 
 This project aims to compare the three frameworks in pracice, and to evaluate if it's worth starting new RL projects in the new Flax.NNX (Flax version 0.11), or the more mature Flax.Linen or PyTorch.
 
-This repository contains high quality implementation of PPO (Proximal Policy Optimization) that make use of GYMNAX environments (Reinforcement Learning Environments in JAX). 
+This repository contains high quality implementation of PPO (Proximal Policy Optimization) that make use of GYMNAX environments that can run on the GPU (Reinforcement Learning Environments in JAX).
+ - **PyTorch implementation:**
+    - Fully object oriented programming.
+    - Uses GYMNAX environments and transfers GPU tensors via DLPack.
+- **Linen implementation:**
+    - Mostly functional programming, with one PPO class that calls everything.
+    - jax.jit compiled functions are big and run once per training iteration.
+- **NNX implementation:**
+    - Mostly object oriented programming, with scans instead of for loops and special variable tracking that enables nnx.jit.
+    - nnx.jit compiled functions that can also be cached using cached_partial.
 
 ## Work in progress & TODO
 This repository is unfinished. I am actively working on it and it should be done in the next weeks.
