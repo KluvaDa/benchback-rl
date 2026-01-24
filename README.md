@@ -13,7 +13,7 @@ This repository is unfinished. I am actively working on it and it should be done
 - [x] Implement PPO in Jax, Flax.Linen
 - [x] Implement PPO in Jax, Flax.NNX
 - [x] Implement entrypoints and benchmarking experiments
-- [ ] Test and debug everything
+- [x] Test and debug everything
 - [ ] Finalise Documentation and this readme
 - [ ] Run all benchmarks
 - [ ] Analyse results and present findings in readme
