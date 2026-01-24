@@ -50,7 +50,8 @@ class PPOConfig:
     seed: int | None = None
     sync_for_timing: bool = False
 
-    notes: str = ""  # any additional notes to log
+    notes_config: str = ""  # notes from the experiment config
+    notes_user: str = ""    # notes passed via CLI
 
     @property
     def batch_size(self) -> int:

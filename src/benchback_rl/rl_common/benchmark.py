@@ -3,7 +3,8 @@
 import gc
 import os
 import time
-from typing import Any, cast, Literal
+from collections.abc import Sequence
+from typing import Any, cast
 
 import gymnax
 import psutil
@@ -108,96 +109,180 @@ def _log_memory(label: str) -> dict[str, float]:
     return metrics
 
 
-def run_all_benchmarks() -> None:
-    """Run all predefined PPO benchmarks."""
-    # Note: Only 1D observation envs are supported (no images)
-    # Excluded: DeepSea-bsuite (8,8), Catch-bsuite (10,5), SimpleBandit-bsuite (1,1)
-    environments = (
-        "CartPole-v1",
-        "Acrobot-v1",
-        "MountainCar-v0",
-        "DiscountingChain-bsuite",
-        "MemoryChain-bsuite",
-        "UmbrellaChain-bsuite",
-        "BernoulliBandit-misc",
-        "GaussianBandit-misc"
-    )
-    models_hidden_sizes_lookup = {
+def _pick_from_loops(index: int, *sequences: Sequence) -> tuple:
+    """Decode a flat index into elements from nested for-loops over sequences."""
+    result = []
+    for seq in reversed(sequences):
+        result.append(seq[index % len(seq)])
+        index //= len(seq)
+    return tuple(reversed(result))
+
+
+def get_benchmark_config(index: int | None, repeats: int | None = None) -> PPOConfig | int:
+    """Get benchmark config at index, or total count if index is None.
+    
+    Args:
+        index: 0-based index of the benchmark to retrieve, or None to get count.
+        repeats: Optional override for the number of repeats per experiment.
+                 If None, uses the default repeats defined for each experiment.
+        
+    Returns:
+        PPOConfig at the given index, or total count if index is None.
+        
+    Raises:
+        IndexError: If index is out of range.
+    """
+    # Model size definitions
+    model_sizes_2_hidden_sizes = {
         "small": (64, 64),
         "medium": (256, 256, 256),
         "large": (1024, 1024, 1024, 1024, 1024, 1024),
     }
 
-    # warmup
-    for _ in range(1):
-        config_template = lambda framework, compile: PPOConfig(
-            framework=framework,
-            compile=compile,
+    # Note: Only 1D observation envs are supported (no images)
+    # Excluded: DeepSea-bsuite (8,8), Catch-bsuite (10,5), SimpleBandit-bsuite (1,1)
+    
+    counter = 0
+    
+    # =========================================================================
+    # Warmup
+    # =========================================================================
+    # sequences to iterate over like in a nested for-loop
+    repeats_range = range(repeats if repeats is not None else 1)
+    frameworks = (("torch", "torch.compile"), ("linen", "jax.jit"), ("nnx", "nnx.cached_partial"))
+    
+    experiment_size = len(repeats_range) * len(frameworks)
+    if index is not None and index < counter + experiment_size:
+        _, (framework, compile) = _pick_from_loops(index - counter, repeats_range, frameworks)
+        return PPOConfig(
+            framework=framework,  # type: ignore[arg-type]
+            compile=compile,  # type: ignore[arg-type]
             env_name="Acrobot-v1",
-            hidden_sizes=models_hidden_sizes_lookup["small"],
+            hidden_sizes=model_sizes_2_hidden_sizes["small"],
             sync_for_timing=False,
             use_wandb=False,
-            notes="warmup"
+            notes_config="warmup",
         )
-        run_ppo_benchmark(config_template("torch", "torch.compile"))
-        run_ppo_benchmark(config_template("linen", "jax.jit"))
-        run_ppo_benchmark(config_template("nnx", "nnx.cached_partial"))
+    else:
+        counter += experiment_size
+    
+    # =========================================================================
+    # Experiment 1: various envs
+    # =========================================================================
+    repeats_range = range(repeats if repeats is not None else 2)
+    environments = ("CartPole-v1",
+                    "Acrobot-v1",
+                    "MountainCar-v0",
+                    "DiscountingChain-bsuite",
+                    "MemoryChain-bsuite",
+                    "UmbrellaChain-bsuite",
+                    "BernoulliBandit-misc",
+                    "GaussianBandit-misc",)
+    frameworks = (("torch", "torch.compile"),
+                  ("linen", "jax.jit"),
+                  ("nnx", "nnx.cached_partial"),)
+    
+    experiment_size = len(repeats_range) * len(environments) * len(frameworks)
+    if index is not None and index < counter + experiment_size:
+        _, env_name, (framework, compile) = _pick_from_loops(index - counter, repeats_range, environments, frameworks)
+        return PPOConfig(
+            framework=framework,  # type: ignore[arg-type]
+            compile=compile,  # type: ignore[arg-type]
+            env_name=env_name,  # type: ignore[arg-type]
+            hidden_sizes=model_sizes_2_hidden_sizes["small"],
+            sync_for_timing=False,
+            use_wandb=True,
+            notes_config="experiment 1: various envs",
+        )
+    else:
+        counter += experiment_size
+    
+    # =========================================================================
+    # Experiment 2: various model sizes
+    # =========================================================================
+    repeats_range = range(repeats if repeats is not None else 4)
+    model_sizes = ("large", "medium", "small")
+    frameworks = (("torch", "torch.compile"), 
+                  ("linen", "jax.jit"),
+                  ("nnx", "nnx.cached_partial"),)
+    
+    experiment_size = len(repeats_range) * len(model_sizes) * len(frameworks)
+    if index is not None and index < counter + experiment_size:
+        _, model_size, (framework, compile) = _pick_from_loops(index - counter, repeats_range, model_sizes, frameworks)
+        return PPOConfig(
+            framework=framework,  # type: ignore[arg-type]
+            compile=compile,  # type: ignore[arg-type]
+            env_name="Acrobot-v1",
+            hidden_sizes=model_sizes_2_hidden_sizes[model_size],
+            sync_for_timing=False,
+            use_wandb=True,
+            notes_config="experiment 2: various model sizes",
+        )
+    else:
+        counter += experiment_size
+    
+    # =========================================================================
+    # Experiment 3: various compilation settings with synced timing
+    # =========================================================================
+    repeats_range = range(repeats if repeats is not None else 4)
+    model_sizes = ("small", "medium", "large")
+    frameworks = (
+        # fully compiled
+        ("torch", "torch.compile"), ("linen", "jax.jit"), ("nnx", "nnx.cached_partial"),
+        # no compilation  
+        ("torch", "none"), ("linen", "none"), ("nnx", "none"),
+        # partial compilation
+        ("nnx", "nnx.jit"), ("torch", "torch.nocompile/env.jit"),
+    )
+    
+    experiment_size = len(repeats_range) * len(model_sizes) * len(frameworks)
+    if index is not None and index < counter + experiment_size:
+        _, model_size, (framework, compile) = _pick_from_loops(index - counter, repeats_range, model_sizes, frameworks)
+        return PPOConfig(
+            framework=framework,
+            compile=compile,  # type: ignore[arg-type]
+            env_name="Acrobot-v1",
+            hidden_sizes=model_sizes_2_hidden_sizes[model_size],
+            sync_for_timing=True,
+            use_wandb=True,
+            notes_config="experiment 3: various compilation settings with synced timing",
+        )
+    else:
+        counter += experiment_size
+    
+    # =========================================================================
+    # End - return count or raise error
+    # =========================================================================
+    if index is None:
+        return counter
+    raise IndexError(f"Benchmark index {index} out of range [0, {counter - 1}]")
 
-    # experiment 1: various envs
-    for _ in range(2):
-        for env_name in environments:
-            config_template = lambda framework, compile: PPOConfig(
-                framework=framework,
-                compile=compile,
-                env_name=env_name,
-                hidden_sizes=models_hidden_sizes_lookup["small"],
-                sync_for_timing=False,
-                use_wandb=True,
-                notes="experiment 1: various envs"
-            )
-            run_ppo_benchmark(config_template("torch", "torch.compile"))
-            run_ppo_benchmark(config_template("linen", "jax.jit"))
-            run_ppo_benchmark(config_template("nnx", "nnx.cached_partial"))
+
+def get_benchmark_count(repeats: int | None = None) -> int:
+    """Get the total number of benchmark configurations.
     
-    # experiment 2: various model sizes on Acrobot-v1
-    for _ in range(4):
-        for model_size in ["large", "medium", "small"]:
-            config_template = lambda framework, compile: PPOConfig(
-                framework=framework,
-                compile=compile,
-                env_name="Acrobot-v1",
-                hidden_sizes=models_hidden_sizes_lookup[model_size],
-                sync_for_timing=False,
-                use_wandb=True,
-                notes="experiment 2: various model sizes"
-            )
-            run_ppo_benchmark(config_template("torch", "torch.compile"))
-            run_ppo_benchmark(config_template("linen", "jax.jit"))
-            run_ppo_benchmark(config_template("nnx", "nnx.cached_partial"))
+    Args:
+        repeats: Optional override for the number of repeats per experiment.
+    """
+    result = get_benchmark_config(None, repeats=repeats)
+    assert isinstance(result, int)
+    return result
+
+
+def run_all_benchmarks(repeats: int | None = None) -> None:
+    """Run all predefined PPO benchmarks sequentially in-process.
     
-    # experiment 3: various compilation settings on Acrobot-v1 and synced timing
-    for _ in range(4):
-        for model_size in ["small", "medium", "large"]:
-            config_template = lambda framework, compile: PPOConfig(
-                framework=framework,
-                compile=compile,
-                env_name="Acrobot-v1",
-                hidden_sizes=models_hidden_sizes_lookup[model_size],
-                sync_for_timing=True,
-                use_wandb=True,
-                notes="experiment 3: various compilation settings with synced timing"
-            )
-            # fully compiled
-            run_ppo_benchmark(config_template("torch", "torch.compile"))
-            run_ppo_benchmark(config_template("linen", "jax.jit"))
-            run_ppo_benchmark(config_template("nnx", "nnx.cached_partial"))
-            # no compilation
-            run_ppo_benchmark(config_template("torch", "none"))
-            run_ppo_benchmark(config_template("linen", "none"))
-            run_ppo_benchmark(config_template("nnx", "none"))
-            # partial compilation
-            run_ppo_benchmark(config_template("nnx", "nnx.jit"))
-            run_ppo_benchmark(config_template("torch", "torch.nocompile/env.jit"))
+    Args:
+        repeats: Optional override for the number of repeats per experiment.
+    
+    Note: For better isolation between runs, use run_all_benchmarks.sh
+    which runs each benchmark in a separate Docker container.
+    """
+    total = get_benchmark_count(repeats=repeats)
+    for i in range(total):
+        config = get_benchmark_config(i, repeats=repeats)
+        assert isinstance(config, PPOConfig)
+        run_ppo_benchmark(config)
 
 
 def run_ppo_benchmark(

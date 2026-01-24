@@ -1,3 +1,5 @@
+name: benchback-run
+
 services:
   run:
     build:

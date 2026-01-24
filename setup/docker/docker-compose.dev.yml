@@ -1,3 +1,5 @@
+name: benchback-dev
+
 services:
   dev:
     build:
