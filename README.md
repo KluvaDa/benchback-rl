@@ -24,7 +24,7 @@ This repository is unfinished. I am actively working on it and it should be done
 - [x] Implement entrypoints and benchmarking experiments
 - [x] Test and debug everything
 - [ ] Finalise Documentation and this readme
-- [ ] Run all benchmarks
+- [x] Run all benchmarks
 - [ ] Analyse results and present findings in readme
 
 ### Current bugs and problems
