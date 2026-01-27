@@ -27,6 +27,11 @@ This repository is unfinished. I am actively working on it and it should be done
 - [x] Run all benchmarks
 - [ ] Analyse results and present findings in readme
 
+### Future work
+- [ ] Also compare to CPU environments.
+- [ ] Also compare to large and expensive GPU environments.
+- [ ] Also compare to PyTorch jit
+
 ### Current bugs and problems
 - The use of different drivers for jax and torch may still be a problem. It doesn't seem to slow anything down, like the transfer of data from jax to torch on the gpu using via DLPack, but vram usage may be affected and competing.
 
