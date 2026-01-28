@@ -15,24 +15,29 @@ authors = [
 ]
 
 dependencies = [
+    # JAX ecosystem packages - versions pinned to match Docker container installation
+    # These are pre-installed in the Docker image; do not update without updating Docker config
     "jax>=0.7.2.dev0",
     "jaxlib>=0.7.2.dev0",
     "flax>=0.11.2",
     "optax>=0.2.6",
-    "torch>=2.9.1",
+    # Other dependencies
+    "torch>=2.10.0",
     "numpy>=2.4.1",
     "gymnax>=0.0.9",
     "python-dotenv>=1.2.1",
     "pyyaml>=6.0.3",
     "tqdm>=4.67.1",
     "wandb>=0.24.0",
+    "pandas>=3.0.0",
+    "seaborn>=0.13.2",
 ]
 
 [project.optional-dependencies]
 # Development dependencies
 dev = [
     "pytest>=9.0.2",
-    "ruff>=0.14.13",
+    "ruff>=0.14.14",
 ]
 
 [project.urls]
