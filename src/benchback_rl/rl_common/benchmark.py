@@ -351,7 +351,8 @@ def run_ppo_benchmark(
         linen_ppo.train_from_scratch()
     elif config.framework == "nnx":
         # Create rngs with all required streams from a single seed
-        seed = config.seed if config.seed is not None else 0
+        # Use provided seed or generate one based on time (consistent with linen/torch)
+        seed = config.seed if config.seed is not None else int(time.time_ns())
         key = jax.random.PRNGKey(seed)
         keys = jax.random.split(key, 4)
         rngs = nnx.Rngs(

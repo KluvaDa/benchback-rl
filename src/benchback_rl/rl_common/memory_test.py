@@ -122,7 +122,8 @@ def _run_ppo_benchmark_no_wandb(config: PPOConfig) -> None:
         linen_ppo.train_from_scratch()
 
     elif config.framework == "nnx":
-        seed = config.seed if config.seed is not None else 0
+        # Use provided seed or generate one based on time (consistent with linen/torch)
+        seed = config.seed if config.seed is not None else int(time.time_ns())
         key = jax.random.PRNGKey(seed)
         keys = jax.random.split(key, 4)
         rngs = nnx.Rngs(
