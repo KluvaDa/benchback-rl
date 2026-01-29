@@ -1,21 +1,30 @@
 """
 Generate benchmark result charts from W&B experiment data.
 
+This file is fully vibe coded using Claude Opus 4.5.
+The code is not quality controlled and does not necessarily follow best practices.
+
 This script creates visualizations for:
 - Experiment 1: Various environments with small model (boxplot + slowdown violin)
 - Experiment 2: Various model sizes with Acrobot-v1 (boxplot)
 """
 
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.ticker import FixedLocator, FuncFormatter, NullFormatter
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import seaborn as sns
 import wandb
+
+# Type aliases for clarity
+ColorRGB: TypeAlias = tuple[float, float, float]
+FilterDict: TypeAlias = dict[str, str]
+SlowdownMetrics: TypeAlias = dict[str, float]
 
 
 # =============================================================================
@@ -24,11 +33,21 @@ import wandb
 
 CACHE_PATH = Path(__file__).parent / "wandb_runs_cache.parquet"
 
+# Figure dimensions
+FIG_SIZE_SMALL = (3, 6)
+FIG_SIZE_MEDIUM = (4, 6)
+FIG_SIZE_LARGE = (7, 9)
+FIG_AXES_RECT = (0.1, 0.22, 0.85, 0.71)  # (left, bottom, width, height)
+
+# Violin plot configuration
+VIOLIN_WIDTH = 0.7
+MIN_POINTS_FOR_VIOLIN = 2
+
 # Color schemes
 _tab10 = sns.color_palette("tab10")
 _tab20c = sns.color_palette("tab20c")
 
-COLORS = {
+COLORS: dict[str, ColorRGB] = {
     "linen": _tab10[2],  # green
     "nnx": _tab10[1],    # orange
     "torch": _tab10[0],  # blue
@@ -36,7 +55,7 @@ COLORS = {
 
 # tab20c: groups of 4 shades (dark to light)
 # indices 0-3: blue, 4-7: orange, 8-11: green
-COLORS_SLOWDOWN = {
+COLORS_SLOWDOWN: dict[str, dict[str, ColorRGB]] = {
     "torch": {"dark": _tab20c[0], "light1": _tab20c[2], "light2": _tab20c[3]},
     "nnx": {"dark": _tab20c[4], "light1": _tab20c[6], "light2": _tab20c[7]},
     "linen": {"dark": _tab20c[8], "light1": _tab20c[10], "light2": _tab20c[11]},
@@ -90,7 +109,7 @@ def save_figure(filename: str, tight: bool = True) -> None:
     plt.close()
 
 
-def style_boxplot(bp: dict[str, Any], color: Any) -> None:
+def style_boxplot(bp: dict[str, Any], color: ColorRGB) -> None:
     """Apply consistent coloring to a boxplot."""
     bp["boxes"][0].set_facecolor(color)
     bp["boxes"][0].set_edgecolor(color)
@@ -113,7 +132,7 @@ def visualise_exp_1_box_plot(runs_df: pd.DataFrame) -> None:
     positions_windows = [3, 3.7, 4.4]
     all_positions = positions_linux + positions_windows
 
-    fig, ax = plt.subplots(figsize=(3, 6))
+    fig, ax = plt.subplots(figsize=FIG_SIZE_SMALL)
 
     # Plot boxes for each OS and framework
     for os_label, positions in zip(OS_LABELS, [positions_linux, positions_windows]):
@@ -170,14 +189,11 @@ def visualise_exp_2_box_plot(runs_df: pd.DataFrame) -> None:
     subset = runs_df[runs_df["config.notes_config"] == "experiment 2: various model sizes"].copy()
     subset["hidden_sizes_str"] = subset["config.hidden_sizes"].apply(str)
 
-    model_sizes = ["[64 64]", "[256 256 256]", "[1024 1024 1024 1024 1024 1024]"]
-    model_labels = ["s", "m", "l"]
-
     positions_linux = [0, 1, 2, 4, 5, 6, 8, 9, 10]
     positions_windows = [14, 15, 16, 18, 19, 20, 22, 23, 24]
     all_positions = positions_linux + positions_windows
 
-    fig, ax = plt.subplots(figsize=(4, 6))
+    fig, ax = plt.subplots(figsize=FIG_SIZE_MEDIUM)
 
     # Plot boxes for each OS, framework, and model size
     for os_label, positions_base in zip(OS_LABELS, [positions_linux, positions_windows]):
@@ -185,7 +201,7 @@ def visualise_exp_2_box_plot(runs_df: pd.DataFrame) -> None:
 
         pos_idx = 0
         for fw in FRAMEWORKS:
-            for ms in model_sizes:
+            for ms in MODEL_SIZES:
                 data = os_subset[
                     (os_subset["config.framework"] == fw) &
                     (os_subset["hidden_sizes_str"] == ms)
@@ -214,7 +230,7 @@ def visualise_exp_2_box_plot(runs_df: pd.DataFrame) -> None:
 
     # X-axis labels
     ax.set_xticks(all_positions)
-    ax.set_xticklabels(model_labels * 6, ha="center", fontsize=8)
+    ax.set_xticklabels(MODEL_SIZE_LABELS * 6, ha="center", fontsize=8)
 
     framework_label_positions = [(1, "linen"), (5, "nnx"), (9, "torch"),
                                  (15, "linen"), (19, "nnx"), (23, "torch")]
@@ -244,13 +260,18 @@ def visualise_exp_2_box_plot(runs_df: pd.DataFrame) -> None:
 # =============================================================================
 
 def compute_slowdown_metrics(
-    baseline: np.ndarray,
-    comparison: np.ndarray,
+    baseline: npt.NDArray[np.floating[Any]],
+    comparison: npt.NDArray[np.floating[Any]],
 ) -> tuple[float, float, float, float]:
     """
     Compute slowdown metrics between baseline and comparison runs.
 
-    Returns: (geo_mean_slowdown, best_case, worst_case, baseline_geo_mean)
+    Args:
+        baseline: Array of baseline run durations.
+        comparison: Array of comparison run durations.
+
+    Returns:
+        Tuple of (geo_mean_slowdown, best_case, worst_case, baseline_geo_mean).
     """
     baseline_geo_mean = float(np.exp(np.mean(np.log(baseline))))
     comparison_geo_mean = float(np.exp(np.mean(np.log(comparison))))
@@ -267,7 +288,8 @@ def compute_slowdown_metrics(
 # =============================================================================
 
 # Shared comparison groups for slowdown charts
-SLOWDOWN_GROUPS: list[tuple[str, dict[str, str], dict[str, str], str]] = [
+# Format: (label, baseline_filter, comparison_filter, color_key)
+SLOWDOWN_GROUPS: list[tuple[str, FilterDict, FilterDict, str]] = [
     # Framework comparisons on Linux
     ("linen→nnx\n(Linux)",
      {"config.framework": "linen", "config.notes_user": "linux docker"},
@@ -307,20 +329,20 @@ SLOWDOWN_VLINE_POSITION = 3.75
 
 def draw_slowdown_violin(
     ax: Axes,
-    geo_means: np.ndarray,
-    best_cases: np.ndarray,
-    worst_cases: np.ndarray,
-    x_positions: np.ndarray,
+    geo_means: npt.NDArray[np.floating[Any]],
+    best_cases: npt.NDArray[np.floating[Any]],
+    worst_cases: npt.NDArray[np.floating[Any]],
+    x_positions: npt.NDArray[np.floating[Any]],
     position: float,
     color_key: str,
-    width: float = 0.7,
+    width: float = VIOLIN_WIDTH,
 ) -> None:
     """Draw violin plots with overlaid scatter points for slowdown data."""
     colors = COLORS_SLOWDOWN[color_key]
     n_points = len(geo_means)
 
     # Draw violins (need at least 2 points)
-    if n_points >= 2:
+    if n_points >= MIN_POINTS_FOR_VIOLIN:
         for values, color in [
             (worst_cases, colors["light2"]),
             (best_cases, colors["light2"]),
@@ -352,11 +374,11 @@ def draw_slowdown_violin(
 
 def draw_slowdown_sub_axis(
     ax: Axes,
-    x_positions: np.ndarray,
-    y_values: np.ndarray,
+    x_positions: npt.NDArray[np.floating[Any]],
+    y_values: npt.NDArray[np.floating[Any]],
     labels: list[str],
     position: float,
-    width: float = 0.7,
+    width: float = VIOLIN_WIDTH,
 ) -> None:
     """Draw small x-axis labels underneath the violin."""
     y_min = float(y_values.min())
@@ -411,11 +433,11 @@ def setup_slowdown_axes(ax: Axes, title: str, y_max: float | None = None) -> Non
 
 def compute_slowdown_data(
     df: pd.DataFrame,
-    baseline_filter: dict[str, str],
-    comparison_filter: dict[str, str],
-) -> list[dict[str, float]]:
+    baseline_filter: FilterDict,
+    comparison_filter: FilterDict,
+) -> list[SlowdownMetrics]:
     """Compute slowdown metrics per environment for exp1."""
-    results: list[dict[str, float]] = []
+    results: list[SlowdownMetrics] = []
     for env_name in df["config.env_name"].unique():
         baseline_mask = (df["config.env_name"] == env_name)
         comparison_mask = (df["config.env_name"] == env_name)
@@ -446,15 +468,15 @@ def visualise_exp_1_slowdown(runs_df: pd.DataFrame) -> None:
     subset = runs_df[runs_df["config.notes_config"] == "experiment 1: various envs"].copy()
 
     fig = plt.figure(figsize=(7, 9))
-    ax = fig.add_axes([0.1, 0.22, 0.85, 0.71])  # [left, bottom, width, height]
+    ax = fig.add_axes((0.1, 0.22, 0.85, 0.71))  # (left, bottom, width, height)
 
     for i, (_, baseline_filter, comparison_filter, color_key) in enumerate(SLOWDOWN_GROUPS):
         data = compute_slowdown_data(subset, baseline_filter, comparison_filter)
-        if len(data) < 2:
+        if len(data) < MIN_POINTS_FOR_VIOLIN:
             continue
 
         position = SLOWDOWN_POSITIONS[i]
-        width = 0.7
+        width = VIOLIN_WIDTH
 
         geo_means = np.array([d["geo_mean"] for d in data])
         best_cases = np.array([d["best_case"] for d in data])
@@ -516,10 +538,10 @@ MODEL_SIZE_LABELS = ["s", "m", "l"]
 
 def compute_slowdown_data_by_model_size(
     df: pd.DataFrame,
-    baseline_filter: dict[str, str],
-    comparison_filter: dict[str, str],
+    baseline_filter: FilterDict,
+    comparison_filter: FilterDict,
     model_size: str,
-) -> dict[str, float] | None:
+) -> SlowdownMetrics | None:
     """Compute slowdown metrics for a single model size."""
     baseline_mask = pd.Series(True, index=df.index)
     comparison_mask = pd.Series(True, index=df.index)
@@ -551,7 +573,7 @@ def visualise_exp_2_slowdown(runs_df: pd.DataFrame) -> None:
     subset["hidden_sizes_str"] = subset["config.hidden_sizes"].apply(str)
 
     fig = plt.figure(figsize=(7, 9))
-    ax = fig.add_axes([0.1, 0.22, 0.85, 0.71])  # [left, bottom, width, height]
+    ax = fig.add_axes((0.1, 0.22, 0.85, 0.71))  # (left, bottom, width, height)
 
     for i, (_, baseline_filter, comparison_filter, color_key) in enumerate(SLOWDOWN_GROUPS):
         # Compute data for each model size
@@ -563,11 +585,11 @@ def visualise_exp_2_slowdown(runs_df: pd.DataFrame) -> None:
             if data:
                 data_by_size.append(data)
 
-        if len(data_by_size) < 2:
+        if len(data_by_size) < MIN_POINTS_FOR_VIOLIN:
             continue
 
         position = SLOWDOWN_POSITIONS[i]
-        width = 0.7
+        width = VIOLIN_WIDTH
 
         geo_means = np.array([d["geo_mean"] for d in data_by_size])
         best_cases = np.array([d["best_case"] for d in data_by_size])
