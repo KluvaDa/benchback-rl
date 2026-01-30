@@ -371,6 +371,26 @@ def draw_slowdown_violin(
         color=colors["dark"], s=30, zorder=11, edgecolors="none",
     )
 
+    # Draw readout annotations on the right side of the violin
+    max_worst = float(np.max(worst_cases))  # worst of the worst cases
+    min_best = float(np.min(best_cases))    # best of the best cases
+    geo_mean_of_geo_means = float(np.exp(np.mean(np.log(geo_means))))
+
+    dash_x_start = position + width * 0.4
+    dash_x_end = position + width * 0.5
+    text_x = position + width * 0.55
+
+    # Draw dashes and labels for each metric
+    for y_val, label in [
+        (max_worst, f"{max_worst:.2f}x"),
+        (geo_mean_of_geo_means, f"{geo_mean_of_geo_means:.2f}x"),
+        (min_best, f"{min_best:.2f}x"),
+    ]:
+        ax.plot([dash_x_start, dash_x_end], [y_val, y_val],
+                color="black", linewidth=1, zorder=12)
+        ax.text(text_x, y_val, label, ha="left", va="center",
+                fontsize=6, color="black", zorder=12)
+
 
 def draw_slowdown_sub_axis(
     ax: Axes,
@@ -521,6 +541,7 @@ Chart:
 - Scatter overlay: one point per environment.
   - y: g_mean_slowdown (disc), range from best to worst (vertical line).
   - x position within violin: baseline g_mean(A) duration (left=fast, right=slow).
+- Readout dashes (right side): max(worst_slowdown), g_mean(g_mean_slowdown), min(best_slowdown).
 - Y-axis: log₂ scale, 1x = no slowdown, larger values = slower."""
     fig.text(0.02, 0.01, footer, fontsize=6, va="bottom", ha="left", family="monospace")
 
@@ -619,6 +640,7 @@ Chart:
 - Scatter overlay: one point per model size.
   - y: g_mean_slowdown (disc), range from best to worst (vertical line).
   - x position within violin: model size (left=s, middle=m, right=l).
+- Readout dashes (right side): max(worst_slowdown), g_mean(g_mean_slowdown), min(best_slowdown).
 - Y-axis: log₂ scale, 1x = no slowdown, larger values = slower."""
     fig.text(0.02, 0.01, footer, fontsize=6, va="bottom", ha="left", family="monospace")
 
