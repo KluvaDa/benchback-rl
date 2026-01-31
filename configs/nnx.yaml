@@ -1,0 +1,5 @@
+framework: nnx
+compile: nnx.jit
+env_name: Asterix-MinAtar
+use_wandb: False
+sync_for_timing: False
