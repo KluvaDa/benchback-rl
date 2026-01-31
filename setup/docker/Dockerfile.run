@@ -27,5 +27,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 #   docker run --gpus all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 --shm-size=1g ...
 # Or use the provided docker-compose.yml
 
+# Copy configuration files for running (don't forget to rebuild if you edit them.)
+COPY configs/ configs/
+
 # Default command
 CMD ["python", "-m", "benchback_rl"]
