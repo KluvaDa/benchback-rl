@@ -1,6 +1,7 @@
 from typing import Any
 import math
 import time
+import warnings
 
 import jax
 import jax.numpy as jnp
@@ -56,9 +57,24 @@ class PPO:
         if config.framework != "linen":
             raise ValueError(f"Expected framework='linen', got '{config.framework}'")
 
+        # Create env functions, optionally flattening observations
+        obs_space = self.env.observation_space(self.env_params)
+        flatten = len(obs_space.shape) > 1
+        if flatten:
+            warnings.warn(f"Only 1D observations supported. Flattening observation space {obs_space.shape} to 1D.")
+            def _reset(rng, params):
+                obs, state = env.reset(rng, params)
+                return obs.reshape(-1), state
+            def _step(rng, state, action, params):
+                obs, state, reward, done, info = env.step(rng, state, action, params)
+                return obs.reshape(-1), state, reward, done, info
+        else:
+            _reset = env.reset
+            _step = env.step
+
         # Create vmapped environment functions (not JIT compiled here - compiled from above in the rollout)
-        self._env_reset = jax.vmap(env.reset, in_axes=(0, None))
-        self._env_step = jax.vmap(env.step, in_axes=(0, 0, 0, None))
+        self._env_reset = jax.vmap(_reset, in_axes=(0, None))
+        self._env_step = jax.vmap(_step, in_axes=(0, 0, 0, None))
 
         # Create optimizer with linear LR schedule annealing to 0
         schedule = optax.linear_schedule(

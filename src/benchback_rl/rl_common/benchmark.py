@@ -1,6 +1,7 @@
 """Benchmark runner for PPO training."""
 
 import gc
+import math
 import os
 import time
 from collections.abc import Sequence
@@ -303,7 +304,6 @@ def run_ppo_benchmark(
 
     if config.framework == "torch":
         env = rl_torch.TorchEnv(config.env_name, config.num_envs, jit=(config.compile != "none"), seed=config.seed)
-
         agent: rl_torch.ActorCritic = rl_torch.DefaultActorCritic(
             obs_dim=env.obs_dim,
             action_dim=env.num_actions,
@@ -333,7 +333,7 @@ def run_ppo_benchmark(
         
         # Initialize model parameters with dummy input
         obs_space = env_.observation_space(env_params)
-        obs_dim: int = obs_space.shape[0]
+        obs_dim: int = math.prod(obs_space.shape)
         dummy_obs = jnp.zeros((1, obs_dim))
         dummy_rng = jax.random.PRNGKey(0)
         model_params: ModelParams = dict(model.init(dummy_rng, dummy_obs))

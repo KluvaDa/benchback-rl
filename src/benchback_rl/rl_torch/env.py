@@ -1,8 +1,9 @@
 """PyTorch environment wrapper using JAX gymnax under the hood."""
 
 from typing import Any
-
+import math
 import time
+import warnings
 import gymnax
 from gymnax.environments import spaces
 import jax
@@ -25,7 +26,7 @@ class TorchEnv:
         self.params: Any
         self.num_actions: int
         self.obs_dim: int
-        self.num_envs: int
+        self.num_envs: int = num_envs
         self._state: Any = None  # Internal JAX env state
         self.rng_key: jax.Array
 
@@ -41,16 +42,29 @@ class TorchEnv:
         obs_space = env.observation_space(self.params)
         if not isinstance(obs_space, spaces.Box):
             raise ValueError(f"Only Box observation spaces supported, got {type(obs_space).__name__}")
-        if len(obs_space.shape) != 1:
-            raise ValueError(f"Only 1D observations supported (no images), got shape {obs_space.shape}")
-        self.obs_dim = obs_space.shape[0]
-
-        self.num_envs = num_envs
+        flatten = len(obs_space.shape) > 1
+        if flatten:
+            self.obs_dim = math.prod(obs_space.shape)
+            warnings.warn(f"Only 1D observations supported. Flattening observation space {obs_space.shape} to 1D.")
+        else:
+            self.obs_dim = obs_space.shape[0]   
+        
+        # modify reset and step functions to flatten observations if needed
+        if flatten:
+            def _reset(rng, params):
+                obs, state = env.reset(rng, params)
+                return obs.reshape(-1), state
+            def _step(rng, state, action, params):
+                obs, state, reward, done, info = env.step(rng, state, action, params)
+                return obs.reshape(-1), state, reward, done, info
+        else:
+            _reset = env.reset
+            _step = env.step
 
         # vmap over: keys (num_envs,), state (num_envs, ...), action (num_envs, ...)
         # params are shared (not vmapped)
-        self._reset_fn = jax.vmap(env.reset, in_axes=(0, None))
-        self._step_fn = jax.vmap(env.step, in_axes=(0, 0, 0, None))
+        self._reset_fn = jax.vmap(_reset, in_axes=(0, None))
+        self._step_fn = jax.vmap(_step, in_axes=(0, 0, 0, None))
 
         if jit:
             self._reset_fn = jax.jit(self._reset_fn)

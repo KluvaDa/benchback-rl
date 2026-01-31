@@ -5,6 +5,9 @@ gymnasium's VectorEnv, while maintaining NNX graph tracking for JIT compilation.
 """
 
 from typing import Any, Callable
+import warnings
+import math
+
 
 import jax
 import jax.numpy as jnp
@@ -83,9 +86,24 @@ class NnxVecEnv(nnx.Module):
         obs_space = self.env.observation_space(self.env_params.value)
         if not isinstance(obs_space, spaces.Box):
             raise ValueError(f"Only Box observation spaces supported, got {type(obs_space).__name__}")
-        if len(obs_space.shape) != 1:
-            raise ValueError(f"Only 1D observations supported (no images), got shape {obs_space.shape}")
-        self.obs_dim = obs_space.shape[0]
+        flatten = len(obs_space.shape) > 1
+        if flatten:
+            self.obs_dim = math.prod(obs_space.shape)
+            warnings.warn(f"Only 1D observations supported. Flattening observation space {obs_space.shape} to 1D.")
+        else:
+            self.obs_dim = obs_space.shape[0]
+        
+        # modify reset and step functions to flatten observations if needed
+        if flatten:
+            def _reset(rng, params):
+                obs, state = self.env.reset(rng, params)
+                return obs.reshape(-1), state
+            def _step(rng, state, action, params):
+                obs, state, reward, done, info = self.env.step(rng, state, action, params)
+                return obs.reshape(-1), state, reward, done, info
+        else:
+            _reset = self.env.reset
+            _step = self.env.step
 
         # Initialize state variable (will be properly set during reset())
         self.state = EnvState(None)
@@ -93,8 +111,8 @@ class NnxVecEnv(nnx.Module):
         # vmap over: keys (num_envs,), state (num_envs, ...), action (num_envs, ...)
         # params are shared (not vmapped)
         # Note: not JIT compiled here - compiled from above in the rollout
-        self.reset_fn = jax.vmap(self.env.reset, in_axes=(0, None))
-        self.step_fn = jax.vmap(self.env.step, in_axes=(0, 0, 0, None))
+        self.reset_fn = jax.vmap(_reset, in_axes=(0, None))
+        self.step_fn = jax.vmap(_step, in_axes=(0, 0, 0, None))
     
     def reset(self) -> jax.Array:
         """Reset all environments.
