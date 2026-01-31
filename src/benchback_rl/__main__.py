@@ -1,12 +1,10 @@
 """Main entry point for benchback_rl package.
 
 Usage:
-    python -m benchback_rl --run_yaml config.yaml   # Run single benchmark from YAML
-    python -m benchback_rl --run_index 42           # Run benchmark at index 42
-    python -m benchback_rl --run_index 42 --repeats 2  # Run with 2 repeats override
-    python -m benchback_rl --n_index                # Print total number of benchmarks
-    python -m benchback_rl --n_index --repeats 2    # Print total with 2 repeats override
-    python -m benchback_rl --run_all                # Run all benchmarks in-process (legacy)
+    python -m benchback_rl --run_yaml config.yaml      # Run single benchmark from YAML
+    python -m benchback_rl --run_index 42              # Run benchmark at index 42
+    python -m benchback_rl --n_index                   # Print total number of benchmarks
+    python -m benchback_rl --run_all                   # Run all benchmarks in-process
 """
 
 import argparse
@@ -34,11 +32,7 @@ def main() -> None:
 Examples:
   python -m benchback_rl --run_yaml configs/torch.yaml
   python -m benchback_rl --run_index 0
-  python -m benchback_rl --run_index 0 --repeats 2
   python -m benchback_rl --n_index
-  python -m benchback_rl --n_index --repeats 2
-  python -m benchback_rl --run_all
-  python -m benchback_rl --run_all --repeats 1
         """
     )
     
@@ -50,12 +44,10 @@ Examples:
     group.add_argument("--n_index", action="store_true",
                        help="Print the total number of benchmark configurations")
     group.add_argument("--run_all", action="store_true",
-                       help="Run all benchmarks in-process (legacy mode, use run_all_benchmarks.sh for isolation)")
+                       help="Run all benchmarks in-process (use run_all_benchmarks.sh for isolation)")
     
     parser.add_argument("--notes", type=str, default="",
                         help="User notes to log in wandb")
-    parser.add_argument("--repeats", type=int, default=None, metavar="N",
-                        help="Override the number of repeats for each experiment (default: use experiment defaults)")
     
     args = parser.parse_args()
 
@@ -64,9 +56,9 @@ Examples:
     load_dotenv(project_root / ".env", override=False)
 
     if args.n_index:
-        print(get_benchmark_count(repeats=args.repeats))
+        print(get_benchmark_count())
     elif args.run_index is not None:
-        config = get_benchmark_config(args.run_index, repeats=args.repeats)
+        config = get_benchmark_config(args.run_index)
         assert isinstance(config, PPOConfig)
         if args.notes:
             config = dataclasses.replace(config, notes_user=args.notes)
@@ -77,7 +69,7 @@ Examples:
             config = dataclasses.replace(config, notes_user=args.notes)
         run_ppo_benchmark(config)
     elif args.run_all:
-        run_all_benchmarks(repeats=args.repeats)
+        run_all_benchmarks()
 
 
 if __name__ == "__main__":

@@ -119,13 +119,11 @@ def _pick_from_loops(index: int, *sequences: Sequence) -> tuple:
     return tuple(reversed(result))
 
 
-def get_benchmark_config(index: int | None, repeats: int | None = None) -> PPOConfig | int:
+def get_benchmark_config(index: int | None) -> PPOConfig | int:
     """Get benchmark config at index, or total count if index is None.
     
     Args:
         index: 0-based index of the benchmark to retrieve, or None to get count.
-        repeats: Optional override for the number of repeats per experiment.
-                 If None, uses the default repeats defined for each experiment.
         
     Returns:
         PPOConfig at the given index, or total count if index is None.
@@ -149,12 +147,11 @@ def get_benchmark_config(index: int | None, repeats: int | None = None) -> PPOCo
     # Warmup
     # =========================================================================
     # sequences to iterate over like in a nested for-loop
-    repeats_range = range(repeats if repeats is not None else 1)
     frameworks = (("torch", "torch.compile"), ("linen", "jax.jit"), ("nnx", "nnx.cached_partial"))
     
-    experiment_size = len(repeats_range) * len(frameworks)
+    experiment_size = len(frameworks)
     if index is not None and index < counter + experiment_size:
-        _, (framework, compile) = _pick_from_loops(index - counter, repeats_range, frameworks)
+        (framework, compile) = _pick_from_loops(index - counter, frameworks)[0]
         return PPOConfig(
             framework=framework,  # type: ignore[arg-type]
             compile=compile,  # type: ignore[arg-type]
@@ -170,7 +167,6 @@ def get_benchmark_config(index: int | None, repeats: int | None = None) -> PPOCo
     # =========================================================================
     # Experiment 1: various envs
     # =========================================================================
-    repeats_range = range(repeats if repeats is not None else 2)
     environments = ("CartPole-v1",
                     "Acrobot-v1",
                     "MountainCar-v0",
@@ -183,9 +179,9 @@ def get_benchmark_config(index: int | None, repeats: int | None = None) -> PPOCo
                   ("linen", "jax.jit"),
                   ("nnx", "nnx.cached_partial"),)
     
-    experiment_size = len(repeats_range) * len(environments) * len(frameworks)
+    experiment_size = len(environments) * len(frameworks)
     if index is not None and index < counter + experiment_size:
-        _, env_name, (framework, compile) = _pick_from_loops(index - counter, repeats_range, environments, frameworks)
+        env_name, (framework, compile) = _pick_from_loops(index - counter, environments, frameworks)
         return PPOConfig(
             framework=framework,  # type: ignore[arg-type]
             compile=compile,  # type: ignore[arg-type]
@@ -201,15 +197,14 @@ def get_benchmark_config(index: int | None, repeats: int | None = None) -> PPOCo
     # =========================================================================
     # Experiment 2: various model sizes
     # =========================================================================
-    repeats_range = range(repeats if repeats is not None else 4)
     model_sizes = ("large", "medium", "small")
     frameworks = (("torch", "torch.compile"), 
                   ("linen", "jax.jit"),
                   ("nnx", "nnx.cached_partial"),)
     
-    experiment_size = len(repeats_range) * len(model_sizes) * len(frameworks)
+    experiment_size = len(model_sizes) * len(frameworks)
     if index is not None and index < counter + experiment_size:
-        _, model_size, (framework, compile) = _pick_from_loops(index - counter, repeats_range, model_sizes, frameworks)
+        model_size, (framework, compile) = _pick_from_loops(index - counter, model_sizes, frameworks)
         return PPOConfig(
             framework=framework,  # type: ignore[arg-type]
             compile=compile,  # type: ignore[arg-type]
@@ -225,7 +220,6 @@ def get_benchmark_config(index: int | None, repeats: int | None = None) -> PPOCo
     # =========================================================================
     # Experiment 3: various compilation settings with synced timing
     # =========================================================================
-    repeats_range = range(repeats if repeats is not None else 4)
     model_sizes = ("small", "medium", "large")
     frameworks = (
         # fully compiled
@@ -236,9 +230,9 @@ def get_benchmark_config(index: int | None, repeats: int | None = None) -> PPOCo
         ("nnx", "nnx.jit"), ("torch", "torch.nocompile/env.jit"),
     )
     
-    experiment_size = len(repeats_range) * len(model_sizes) * len(frameworks)
+    experiment_size = len(model_sizes) * len(frameworks)
     if index is not None and index < counter + experiment_size:
-        _, model_size, (framework, compile) = _pick_from_loops(index - counter, repeats_range, model_sizes, frameworks)
+        model_size, (framework, compile) = _pick_from_loops(index - counter, model_sizes, frameworks)
         return PPOConfig(
             framework=framework,
             compile=compile,  # type: ignore[arg-type]
@@ -259,29 +253,22 @@ def get_benchmark_config(index: int | None, repeats: int | None = None) -> PPOCo
     raise IndexError(f"Benchmark index {index} out of range [0, {counter - 1}]")
 
 
-def get_benchmark_count(repeats: int | None = None) -> int:
-    """Get the total number of benchmark configurations.
-    
-    Args:
-        repeats: Optional override for the number of repeats per experiment.
-    """
-    result = get_benchmark_config(None, repeats=repeats)
+def get_benchmark_count() -> int:
+    """Get the total number of benchmark configurations."""
+    result = get_benchmark_config(None)
     assert isinstance(result, int)
     return result
 
 
-def run_all_benchmarks(repeats: int | None = None) -> None:
+def run_all_benchmarks() -> None:
     """Run all predefined PPO benchmarks sequentially in-process.
-    
-    Args:
-        repeats: Optional override for the number of repeats per experiment.
     
     Note: For better isolation between runs, use run_all_benchmarks.sh
     which runs each benchmark in a separate Docker container.
     """
-    total = get_benchmark_count(repeats=repeats)
+    total = get_benchmark_count()
     for i in range(total):
-        config = get_benchmark_config(i, repeats=repeats)
+        config = get_benchmark_config(i)
         assert isinstance(config, PPOConfig)
         run_ppo_benchmark(config)
 
