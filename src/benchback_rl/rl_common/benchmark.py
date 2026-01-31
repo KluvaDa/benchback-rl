@@ -165,7 +165,7 @@ def get_benchmark_config(index: int | None) -> PPOConfig | int:
         counter += experiment_size
     
     # =========================================================================
-    # Experiment 1: various envs
+    # V2 Exp1: async
     # =========================================================================
     environments = ("CartPole-v1",
                     "Acrobot-v1",
@@ -174,53 +174,47 @@ def get_benchmark_config(index: int | None) -> PPOConfig | int:
                     "MemoryChain-bsuite",
                     "UmbrellaChain-bsuite",
                     "BernoulliBandit-misc",
-                    "GaussianBandit-misc",)
+                    "GaussianBandit-misc",
+                    "Asterix-MinAtar",
+                    "Breakout-MinAtar",
+                    "Freeway-MinAtar",
+                    "SpaceInvaders-MinAtar",)
     frameworks = (("torch", "torch.compile"),
                   ("linen", "jax.jit"),
                   ("nnx", "nnx.cached_partial"),)
+    model_sizes = ("small", "medium", "large")
     
-    experiment_size = len(environments) * len(frameworks)
+    experiment_size = len(environments) * len(frameworks) * len(model_sizes)
     if index is not None and index < counter + experiment_size:
-        env_name, (framework, compile) = _pick_from_loops(index - counter, environments, frameworks)
+        env_name, (framework, compile), model_size = _pick_from_loops(index - counter, environments, frameworks, model_sizes)
         return PPOConfig(
-            framework=framework,  # type: ignore[arg-type]
-            compile=compile,  # type: ignore[arg-type]
-            env_name=env_name,  # type: ignore[arg-type]
-            hidden_sizes=model_sizes_2_hidden_sizes["small"],
-            sync_for_timing=False,
-            use_wandb=True,
-            notes_config="experiment 1: various envs",
-        )
-    else:
-        counter += experiment_size
-    
-    # =========================================================================
-    # Experiment 2: various model sizes
-    # =========================================================================
-    model_sizes = ("large", "medium", "small")
-    frameworks = (("torch", "torch.compile"), 
-                  ("linen", "jax.jit"),
-                  ("nnx", "nnx.cached_partial"),)
-    
-    experiment_size = len(model_sizes) * len(frameworks)
-    if index is not None and index < counter + experiment_size:
-        model_size, (framework, compile) = _pick_from_loops(index - counter, model_sizes, frameworks)
-        return PPOConfig(
-            framework=framework,  # type: ignore[arg-type]
-            compile=compile,  # type: ignore[arg-type]
-            env_name="Acrobot-v1",
+            framework=framework,
+            compile=compile,
+            env_name=env_name,
             hidden_sizes=model_sizes_2_hidden_sizes[model_size],
             sync_for_timing=False,
             use_wandb=True,
-            notes_config="experiment 2: various model sizes",
+            notes_config="V2 Exp1: async",
         )
     else:
         counter += experiment_size
     
     # =========================================================================
-    # Experiment 3: various compilation settings with synced timing
+    # V2 Exp2: sync, envs
     # =========================================================================
-    model_sizes = ("small", "medium", "large")
+    # same size as previous experiment, different defaults
+    environments = ("CartPole-v1",
+                    "Acrobot-v1",
+                    "MountainCar-v0",
+                    "DiscountingChain-bsuite",
+                    "MemoryChain-bsuite",
+                    "UmbrellaChain-bsuite",
+                    "BernoulliBandit-misc",
+                    "GaussianBandit-misc",
+                    "Asterix-MinAtar",
+                    "Breakout-MinAtar",
+                    "Freeway-MinAtar",
+                    "SpaceInvaders-MinAtar",)
     frameworks = (
         # fully compiled
         ("torch", "torch.compile"), ("linen", "jax.jit"), ("nnx", "nnx.cached_partial"),
@@ -229,18 +223,45 @@ def get_benchmark_config(index: int | None) -> PPOConfig | int:
         # partial compilation
         ("nnx", "nnx.jit"), ("torch", "torch.nocompile/env.jit"),
     )
-    
-    experiment_size = len(model_sizes) * len(frameworks)
+    model_sizes = ("small",)
     if index is not None and index < counter + experiment_size:
-        model_size, (framework, compile) = _pick_from_loops(index - counter, model_sizes, frameworks)
+        env_name, (framework, compile), model_size = _pick_from_loops(index - counter, environments, frameworks, model_sizes)
         return PPOConfig(
             framework=framework,
-            compile=compile,  # type: ignore[arg-type]
-            env_name="Acrobot-v1",
+            compile=compile,
+            env_name=env_name,
             hidden_sizes=model_sizes_2_hidden_sizes[model_size],
             sync_for_timing=True,
             use_wandb=True,
-            notes_config="experiment 3: various compilation settings with synced timing",
+            notes_config="V2 Exp2: sync, envs",
+        )
+    else:
+        counter += experiment_size
+    
+    # =========================================================================
+    # V2 Exp3: sync, models
+    # =========================================================================
+    # same size as previous experiment, different defaults
+    environments = ("Acrobot-v1",)
+    frameworks = (
+        # fully compiled
+        ("torch", "torch.compile"), ("linen", "jax.jit"), ("nnx", "nnx.cached_partial"),
+        # no compilation  
+        ("torch", "none"), ("linen", "none"), ("nnx", "none"),
+        # partial compilation
+        ("nnx", "nnx.jit"), ("torch", "torch.nocompile/env.jit"),
+    )
+    model_sizes = ("small", "medium", "large")
+    if index is not None and index < counter + experiment_size:
+        env_name, (framework, compile), model_size = _pick_from_loops(index - counter, environments, frameworks, model_sizes)
+        return PPOConfig(
+            framework=framework,
+            compile=compile,
+            env_name=env_name,
+            hidden_sizes=model_sizes_2_hidden_sizes[model_size],
+            sync_for_timing=True,
+            use_wandb=True,
+            notes_config="V2 Exp3: sync, models",
         )
     else:
         counter += experiment_size
