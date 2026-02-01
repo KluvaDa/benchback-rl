@@ -224,6 +224,7 @@ def get_benchmark_config(index: int | None) -> PPOConfig | int:
         ("nnx", "nnx.jit"), ("torch", "torch.nocompile/env.jit"),
     )
     model_sizes = ("small",)
+    experiment_size = len(environments) * len(frameworks) * len(model_sizes)
     if index is not None and index < counter + experiment_size:
         env_name, (framework, compile), model_size = _pick_from_loops(index - counter, environments, frameworks, model_sizes)
         return PPOConfig(
@@ -252,6 +253,7 @@ def get_benchmark_config(index: int | None) -> PPOConfig | int:
         ("nnx", "nnx.jit"), ("torch", "torch.nocompile/env.jit"),
     )
     model_sizes = ("small", "medium", "large")
+    experiment_size = len(environments) * len(frameworks) * len(model_sizes)
     if index is not None and index < counter + experiment_size:
         env_name, (framework, compile), model_size = _pick_from_loops(index - counter, environments, frameworks, model_sizes)
         return PPOConfig(
