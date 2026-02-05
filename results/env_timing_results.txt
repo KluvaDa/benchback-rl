@@ -1,0 +1,128 @@
+====================================================================================================
+ENVIRONMENT TIMING BENCHMARK RESULTS
+====================================================================================================
+
+Configuration:
+  Number of parallel environments (vmap): 4096
+  Warmup runs: 10
+  Timed runs: 100
+  Trim percent (outlier exclusion): 10%
+  Timestamp: 2026-02-04 17:41:00
+  JAX devices: [CudaDevice(id=0)]
+
+----------------------------------------------------------------------------------------------------
+Environment                  Trimmed Mean   Trimmed Std    Mean (ms)    Std (ms)     Median (ms) 
+----------------------------------------------------------------------------------------------------
+DiscountingChain-bsuite      0.159          0.014          0.179        0.088        0.156       
+UmbrellaChain-bsuite         0.168          0.013          0.194        0.103        0.167       
+MemoryChain-bsuite           0.178          0.021          0.194        0.076        0.170       
+GaussianBandit-misc          0.217          0.023          0.239        0.111        0.217       
+BernoulliBandit-misc         0.249          0.034          0.269        0.117        0.242       
+MountainCar-v0               0.268          0.035          0.282        0.081        0.268       
+CartPole-v1                  0.316          0.038          0.328        0.077        0.312       
+Acrobot-v1                   0.317          0.037          0.333        0.090        0.312       
+Breakout-MinAtar             0.470          0.018          0.504        0.163        0.466       
+SpaceInvaders-MinAtar        0.533          0.024          0.555        0.104        0.530       
+Freeway-MinAtar              3.158          0.114          3.209        0.234        3.118       
+Asterix-MinAtar              4.824          0.385          4.887        0.513        4.688       
+----------------------------------------------------------------------------------------------------
+
+Detailed Results:
+====================================================================================================
+
+DiscountingChain-bsuite:
+  Observation dim: 2
+  Number of actions: 5
+  Trimmed Mean ± Std (10% excluded): 0.159 ± 0.014 ms
+  Full Mean ± Std: 0.179 ± 0.088 ms
+  Range: [0.131, 0.818] ms
+  Median: 0.156 ms
+
+UmbrellaChain-bsuite:
+  Observation dim: 3
+  Number of actions: 2
+  Trimmed Mean ± Std (10% excluded): 0.168 ± 0.013 ms
+  Full Mean ± Std: 0.194 ± 0.103 ms
+  Range: [0.146, 0.892] ms
+  Median: 0.167 ms
+
+MemoryChain-bsuite:
+  Observation dim: 3
+  Number of actions: 2
+  Trimmed Mean ± Std (10% excluded): 0.178 ± 0.021 ms
+  Full Mean ± Std: 0.194 ± 0.076 ms
+  Range: [0.148, 0.593] ms
+  Median: 0.170 ms
+
+GaussianBandit-misc:
+  Observation dim: 4
+  Number of actions: 2
+  Trimmed Mean ± Std (10% excluded): 0.217 ± 0.023 ms
+  Full Mean ± Std: 0.239 ± 0.111 ms
+  Range: [0.174, 1.073] ms
+  Median: 0.217 ms
+
+BernoulliBandit-misc:
+  Observation dim: 4
+  Number of actions: 2
+  Trimmed Mean ± Std (10% excluded): 0.249 ± 0.034 ms
+  Full Mean ± Std: 0.269 ± 0.117 ms
+  Range: [0.189, 1.071] ms
+  Median: 0.242 ms
+
+MountainCar-v0:
+  Observation dim: 2
+  Number of actions: 3
+  Trimmed Mean ± Std (10% excluded): 0.268 ± 0.035 ms
+  Full Mean ± Std: 0.282 ± 0.081 ms
+  Range: [0.197, 0.677] ms
+  Median: 0.268 ms
+
+CartPole-v1:
+  Observation dim: 4
+  Number of actions: 2
+  Trimmed Mean ± Std (10% excluded): 0.316 ± 0.038 ms
+  Full Mean ± Std: 0.328 ± 0.077 ms
+  Range: [0.238, 0.661] ms
+  Median: 0.312 ms
+
+Acrobot-v1:
+  Observation dim: 6
+  Number of actions: 3
+  Trimmed Mean ± Std (10% excluded): 0.317 ± 0.037 ms
+  Full Mean ± Std: 0.333 ± 0.090 ms
+  Range: [0.248, 0.912] ms
+  Median: 0.312 ms
+
+Breakout-MinAtar:
+  Observation dim: 400
+  Number of actions: 3
+  Trimmed Mean ± Std (10% excluded): 0.470 ± 0.018 ms
+  Full Mean ± Std: 0.504 ± 0.163 ms
+  Range: [0.424, 1.604] ms
+  Median: 0.466 ms
+
+SpaceInvaders-MinAtar:
+  Observation dim: 600
+  Number of actions: 4
+  Trimmed Mean ± Std (10% excluded): 0.533 ± 0.024 ms
+  Full Mean ± Std: 0.555 ± 0.104 ms
+  Range: [0.484, 1.234] ms
+  Median: 0.530 ms
+
+Freeway-MinAtar:
+  Observation dim: 700
+  Number of actions: 3
+  Trimmed Mean ± Std (10% excluded): 3.158 ± 0.114 ms
+  Full Mean ± Std: 3.209 ± 0.234 ms
+  Range: [2.998, 4.280] ms
+  Median: 3.118 ms
+
+Asterix-MinAtar:
+  Observation dim: 400
+  Number of actions: 5
+  Trimmed Mean ± Std (10% excluded): 4.824 ± 0.385 ms
+  Full Mean ± Std: 4.887 ± 0.513 ms
+  Range: [4.334, 6.309] ms
+  Median: 4.688 ms
+
