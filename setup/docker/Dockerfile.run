@@ -29,6 +29,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Copy configuration files for running (don't forget to rebuild if you edit them.)
 COPY configs/ configs/
+COPY results/ results/
 
 # Default command
 CMD ["python", "-m", "benchback_rl"]
