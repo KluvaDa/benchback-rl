@@ -160,7 +160,110 @@ And to quantify the comparison between the operating systems:
 - Runs with larger models are affected less by the OS across all frameworks.
 - The OS slowdown varies with environments without a clear trend.
 
+A possible explanation for the slower performance on Windows is the Power Options setting in the Control Panel. My PC was set to the default **Balanced** power plan, which differs from **High performance**. The ways in which the power plans differ is explained in the [Hyperparameters and Experimental setup](#hyperparameters-and-experimental-setup) section: 
+
+
 # Hyperparameters and Experimental setup
+
+The benchmark keeps the PPO algorithm and most training settings fixed. The main experimental variables are the implementation framework, compilation mode, model size, environment, timing mode, and operating system. I did not tune PPO performance for each environment; the goal is to isolate framework and compilation overheads under a consistent workload.
+
+## Workload
+
+All environments are Gymnax environments running in JAX. For Linen and NNX, the environment, rollout, advantage calculation, and update can all sit inside JAX/NNX compiled code. For Torch, the environment still runs in JAX on the GPU, and tensors are transferred between JAX and Torch with DLPack.
+
+The benchmark uses environments with discrete actions and flattened observations:
+
+- Classic control and bsuite: `CartPole-v1`, `Acrobot-v1`, `MountainCar-v0`, `DiscountingChain-bsuite`, `MemoryChain-bsuite`, `UmbrellaChain-bsuite`, `BernoulliBandit-misc`, `GaussianBandit-misc`
+- MinAtar: `Asterix-MinAtar`, `Breakout-MinAtar`, `Freeway-MinAtar`, `SpaceInvaders-MinAtar`
+
+Gymnax follows the older Gym API and returns a single `done` flag, without distinguishing terminations from time-limit truncations. I store `done[t]` as the flag produced after taking `action[t]`. In GAE, `done=True` masks the next value estimate, so truncations are treated as terminal states. This can introduce a small bias for time-limit truncations because PPO does not bootstrap through them, but the behavior is shared across all framework implementations and keeps the benchmark comparison consistent.
+
+## PPO Implementation Scope
+
+The PPO implementations follow the 13 core implementation details from [The 37 Implementation Details of Proximal Policy Optimization](https://iclr-blog-track.github.io/2022/03/25/ppo-implementation-details/). I only implement the discrete-action, feed-forward MLP version used by these environments: no continuous actions, CNN policies, recurrent policies, or image observations.
+
+## PPO Settings
+
+These settings are shared by all runs unless an experiment explicitly changes them:
+
+- Rollout: `32` parallel environments, `256` steps per rollout, batch size `8192`
+- Update: `8` minibatches per epoch, minibatch size `1024`, `10` epochs per update
+- Training length: `100` iterations, where each iteration is one rollout plus one update
+- Optimizer: Adam with learning rate linearly decayed from `2.5e-4` to `0`
+- PPO: `gamma=0.99`, `gae_lambda=0.95`, `clip_coef=0.2`, `clip_vloss=True`
+- Loss coefficients: `ent_coef=0.01`, `vf_coef=0.5`
+- Optimizer details: `max_grad_norm=0.5`, `adam_eps=1e-5`, `adam_betas=(0.9, 0.999)`
+
+Some experiments also enable `sync_for_timing`, which synchronizes asynchronous GPU work immediately before and after timed sections. This makes rollout and update timings meaningful, but it also adds synchronization points that would not normally be present in a fully asynchronous training loop.
+
+## Models
+
+Each implementation uses separate actor and critic MLPs with the same hidden-layer sizes. Hidden layers use `tanh` activations. The actor output dimension is the environment action-space size, and the critic output dimension is `1`.
+
+The model sizes are:
+
+- `small`: hidden sizes `[64, 64]`, so each actor/critic is `obs -> 64 -> 64 -> output`
+- `medium`: hidden sizes `[256, 256, 256]`, so each actor/critic is `obs -> 256 -> 256 -> 256 -> output`
+- `large`: hidden sizes `[1024, 1024, 1024, 1024, 1024, 1024]`, so each actor/critic has six hidden layers of width `1024`
+
+The same architecture shape is used in Torch, Linen, and NNX. The implementations differ in framework mechanics and compilation, not in model topology.
+
+## Compilation Modes
+
+The compilation modes are:
+
+- Linen `none`: rollout, GAE, and update run without the explicit top-level `jax.jit` wrappers used in the benchmark.
+- Linen `jax.jit`: the rollout, GAE, and update functions are wrapped with `jax.jit`. The Gymnax environment step is inside the rollout function, so environment stepping is compiled as part of the rollout.
+- NNX `none`: rollout, GAE, and update run without NNX compilation.
+- NNX `nnx.jit`: rollout, GAE, and update are wrapped with `nnx.jit`.
+- NNX `nnx.cached_partial`: rollout, GAE, and update are wrapped with `nnx.jit` and bound to the PPO object with `nnx.cached_partial`, reducing repeated NNX object handling overhead.
+- Torch `none`: the PyTorch model is not compiled, and the JAX environment wrapper is not explicitly jitted.
+- Torch `torch.nocompile/env.jit`: the PyTorch model is not compiled, but the JAX environment reset and step functions are jitted.
+- Torch `torch.compile`: the PyTorch model is compiled with `torch.compile`, and the JAX environment reset and step functions are jitted.
+
+The main fully compiled comparison uses Linen `jax.jit`, NNX `nnx.cached_partial`, and Torch `torch.compile`.
+
+## Experiment Grid
+
+The benchmark schedule is generated in `src/benchback_rl/rl_common/benchmark.py` as a flat list of `231` configurations, run in this order:
+
+- Warmup: `3` fully compiled runs, one per framework on `Acrobot-v1` with the `small` model. These are not plotted; they trigger first-time framework setup and let the machine reach a steadier thermal state before the compared runs.
+- `V2 Exp1: async`: `108` runs from `12` environments x `3` frameworks x `3` model sizes, all fully compiled and timed asynchronously. This block is used for **Experiment 1** and the overhead analysis in **Experiment 1 part 2**.
+- `V2 Exp2: sync, envs`: `96` runs from `12` environments x `8` framework/compilation combinations x the `small` model.
+- `V2 Exp3: sync, models`: `24` runs from `Acrobot-v1` x `8` framework/compilation combinations x `3` model sizes.
+
+The `V2 Exp2` and `V2 Exp3` blocks together form the synchronized timing set used for **Experiment 2** and **Experiment 3**. **Experiment 4** repeats the full schedule on Windows/WSL2 Docker and compares it to the Linux results.
+
+The Linux experiments were run three times, so the logged Linux results contain `684` plotted runs (`228` non-warmup configurations x `3` repeats), plus `9` warmup runs. The Windows run repeated the full `231`-configuration schedule once, giving `228` plotted Windows runs plus `3` warmups.
+
+The benchmark configs leave `seed=None`, so each run generates a time-based seed. This means the repeated runs include normal variation from random initialization, action sampling, environment randomness, and minibatch shuffling, in addition to system-level timing noise.
+
+## Hardware
+
+The benchmarks were run on:
+
+- CPU: Intel Core i5-8600K, 6 cores, `3.6 GHz` base clock
+- GPU: Nvidia RTX 2080, `8 GB` VRAM
+- Memory: `32 GB` system RAM at `2133 MT/s`
+- Motherboard: ASRock Z390 Phantom Gaming-ITX/ac
+
+## Windows Power Settings
+
+One possible explanation for lower Windows performance is that the Windows runs used the default **Balanced** power plan, while the Linux runs were not subject to this Windows power policy. Compared to **High performance**, the most relevant settings were:
+
+- **PCIe Link State Power Management** was set to **Moderate power savings** instead of **Off**
+- **CPU Minimum processor state** was set to **5%** instead of **100%**
+- **CPU energy performance preference** was set to **33%** instead of **0%**, making the CPU less aggressively performance-oriented
+- **CPU boost policy** was set to **60%** instead of **100%**
+- **CPU performance ramp-up behaviour** was less aggressive:
+  - increase policy was **Ideal** instead of **Rocket**
+  - increase threshold was **60%** instead of **30%**
+  - performance check interval was **30 ms** instead of **15 ms**
+- **CPU performance ramp-down behaviour** was also different:
+  - decrease policy was **Ideal** instead of **Single**
+  - decrease threshold was **20%** instead of **10%**
+
+For future work, I would like to re-run the experiment on Windows with the High performance power plan.
 
 # Installation and Setup
 
@@ -180,10 +283,11 @@ And to quantify the comparison between the operating systems:
 - [x] Analyse results and present findings in readme
 
 ### Future work
-- [ ] Also compare to Equinox
+- [ ] Rerun experiments on Windows with the High performance power plan.
+- [ ] Also compare to Equinox.
 - [ ] Also compare to CPU environments.
 - [ ] Also compare to large and expensive GPU environments.
-- [ ] Also compare to PyTorch jit
+- [ ] Also compare to PyTorch jit.
 
 <!-- 
 # The rest of this readme is outdated and is only kept for copy pasting.
