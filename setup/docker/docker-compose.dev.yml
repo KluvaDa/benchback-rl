@@ -15,6 +15,9 @@ services:
     ulimits:
       memlock: -1
       stack: 67108864
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
     volumes:
       # Bind mount the entire workspace
       - ../..:/workspace
@@ -23,3 +26,4 @@ services:
     # Keep container running
     stdin_open: true
     tty: true
+    
