@@ -394,9 +394,9 @@ The shared PPO behavior follows the 13 core implementation details linked in the
 - [x] Implement PPO in PyTorch
 - [x] Implement PPO in Jax, Flax.Linen
 - [x] Implement PPO in Jax, Flax.NNX
-- [x] Implement entrypoints and benchmarking experiments
-- [x] Test and debug everything
-- [x] Finalise Documentation and this readme
+- [x] Implement entrypoints and benchmarking ex periments
+- [x] Test and debug everything 
+- [x] Finalise Documentation and this readme    
 - [x] Run all benchmarks
 - [x] Analyse results and present findings in readme
 
